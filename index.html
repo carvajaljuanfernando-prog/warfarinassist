@@ -6,20 +6,27 @@
     <title>WarfarinAssist - Soporte Clínico CardioUDES</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
         #chat-window {
-            height: 58vh;
+            height: 60vh;
             overflow-y: auto;
             scroll-behavior: smooth;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
         }
         .message-box {
             max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            line-height: 1.5;
+            padding: 14px 18px;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            animation: fadeIn 0.2s ease-out;
         }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .user-message {
             background-color: #4f46e5;
             color: white;
@@ -29,360 +36,394 @@
         .bot-message {
             background-color: #ffffff;
             border: 1px solid #e5e7eb;
-            color: #111827;
+            color: #1f2937;
             margin-right: auto;
             border-bottom-left-radius: 4px;
-        }
-        .alert-critical {
-            background-color: #fee2e2;
-            color: #991b1b;
-            border: 2px solid #ef4444;
-            padding: 12px;
-            border-radius: 12px;
-            margin-top: 8px;
         }
         .schedule-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 0.85rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
         }
         .schedule-table th, .schedule-table td {
             border: 1px solid #e5e7eb;
-            padding: 8px;
+            padding: 10px;
             text-align: center;
         }
-        .schedule-table th { background-color: #f9fafb; font-weight: 600; }
+        .schedule-table th { background-color: #f9fafb; font-weight: 700; color: #374151; }
         .btn-action {
-            padding: 10px 16px;
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
             font-weight: 600;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: 1px solid transparent;
-            font-size: 0.9rem;
-            width: 100%;
+            color: #4f46e5;
             text-align: left;
+            transition: all 0.2s;
         }
-        .btn-action:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .btn-action:hover {
+            background-color: #eef2ff;
+            border-color: #4f46e5;
+        }
         .info-card {
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #4f46e5;
             padding: 12px;
-            margin-top: 10px;
-            background-color: #eff6ff;
+            margin: 12px 0;
+            background-color: #f5f3ff;
             border-radius: 0 12px 12px 0;
         }
-        .day-zero {
-            background-color: #fef3c7;
-            font-weight: bold;
-            border: 2px solid #f59e0b;
-        }
+        .day-zero { background-color: #fef3c7; font-weight: bold; border: 2px solid #f59e0b !important; }
         .purpose-box {
             background-color: #ffffff;
             border-bottom: 2px solid #e5e7eb;
-            padding: 12px 20px;
-            font-size: 0.75rem;
-            color: #374151;
-            line-height: 1.4;
+            padding: 16px 24px;
+            font-size: 0.8rem;
+            color: #4b5563;
         }
-        .caution-text {
-            color: #b91c1c;
-            font-weight: 700;
-        }
+        .caution-tag { color: #dc2626; font-weight: 800; text-transform: uppercase; }
         .logo-container {
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             background: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             flex-shrink: 0;
         }
+        .loading-pulse {
+            animation: pulse 1.5s infinite;
+            color: #4f46e5;
+            font-weight: bold;
+            font-style: italic;
+            font-size: 0.8rem;
+        }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
     </style>
 </head>
-<body>
+<body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
 
-    <div class="min-h-screen flex items-center justify-center p-2 sm:p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-200">
-            
-            <header class="p-5 bg-indigo-700 text-white shadow-lg shrink-0 flex items-center space-x-4">
-                <div class="logo-container">
-                    <svg viewBox="0 0 400 400" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="200" cy="200" r="190" fill="none" stroke="#0e5a71" stroke-width="8"/>
-                        <path d="M190 100 C130 100 90 150 90 240 C90 320 130 350 180 350 C180 350 190 320 190 270 L190 130" fill="none" stroke="#0e5a71" stroke-width="14" stroke-linecap="round"/>
-                        <path d="M210 100 C270 100 310 150 310 240 C310 320 270 350 220 350 C220 350 210 320 210 270 L210 130" fill="none" stroke="#0e5a71" stroke-width="14" stroke-linecap="round"/>
-                        <path d="M200 60 L200 120" stroke="#0e5a71" stroke-width="14" stroke-linecap="round"/>
-                        <path d="M200 275 C200 275 160 240 160 205 C160 178 180 165 200 185 C220 165 240 178 240 205 C240 240 200 275 200 275 Z" fill="#0e5a71"/>
-                        <path d="M168 210 H182 L188 185 L196 235 L208 200 L216 210 H232" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="text-xl font-black tracking-tight">WarfarinAssist</h1>
-                    <p class="text-[10px] opacity-90 italic font-medium leading-tight">Desarrollado por: Dr. Juan Fernando Carvajal E.</p>
-                    <p class="text-[9px] opacity-100 uppercase tracking-widest font-bold mt-0.5">Semillero CardioUDES</p>
-                </div>
-            </header>
-            
-            <section class="purpose-box">
-                <p><strong>Propósito:</strong> Apoyar al personal de salud en la toma de decisiones sobre warfarina. <br>
-                <span class="caution-text">AVISO:</span> Debe ser <span class="underline">interpretada con precaución</span> y validada por juicio clínico.</p>
-            </section>
-            
-            <div id="chat-window" class="p-4 bg-gray-50 flex-grow flex flex-col space-y-1"></div>
-            
-            <div class="p-4 bg-white border-t shrink-0">
-                <div class="flex space-x-2">
-                    <input type="text" id="user-input" placeholder="Escriba aquí (ej. 1 o Dosis)" 
-                           class="flex-grow p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm"
-                           onkeypress="handleKeyPress(event)">
-                    <button onclick="processInput(null, null)" class="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </button>
-                </div>
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-200 h-[95vh] sm:h-auto">
+        
+        <!-- HEADER -->
+        <header class="p-6 bg-indigo-700 text-white flex items-center space-x-5 shrink-0">
+            <div class="logo-container">
+                <svg viewBox="0 0 400 400" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="200" cy="200" r="190" fill="none" stroke="#0e5a71" stroke-width="8"/>
+                    <path d="M190 100 C130 100 90 150 90 240 C90 320 130 350 180 350 C180 350 190 320 190 270 L190 130" fill="none" stroke="#0e5a71" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M210 100 C270 100 310 150 310 240 C310 320 270 350 220 350 C220 350 210 320 210 270 L210 130" fill="none" stroke="#0e5a71" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M200 60 L200 120" stroke="#0e5a71" stroke-width="14" stroke-linecap="round"/>
+                    <path d="M200 275 C200 275 160 240 160 205 C160 178 180 165 200 185 C220 165 240 178 240 205 C240 240 200 275 200 275 Z" fill="#0e5a71"/>
+                    <path d="M168 210 H182 L188 185 L196 235 L208 200 L216 210 H232" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </div>
-            
-            <footer class="p-2 bg-gray-100 text-center text-[8px] text-gray-500 border-t uppercase tracking-widest font-semibold shrink-0">
-                Decision Support Tool • Evidence Based
-            </footer>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">WarfarinAssist</h1>
+                <p class="text-[11px] opacity-90 mt-0.5 italic font-medium leading-tight">Dr. Juan Fernando Carvajal E. - Cardiólogo</p>
+                <p class="text-[10px] opacity-100 uppercase tracking-[0.2em] font-bold mt-1.5 text-indigo-200">Semillero CardioUDES</p>
+            </div>
+        </header>
+
+        <section class="purpose-box shrink-0">
+            <p><span class="caution-tag">Propósito:</span> Asistencia clínica en anticoagulación. <br>
+            <span class="caution-tag">Aviso:</span> Toda información debe ser <span class="underline">validada por juicio clínico</span> profesional.</p>
+        </section>
+
+        <div id="chat-window"></div>
+
+        <div class="p-4 bg-white border-t shrink-0">
+            <div class="flex space-x-3">
+                <input type="text" id="user-input" placeholder="Escriba aquí (ej. 1 o Dosis)" 
+                       class="flex-grow p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                <button id="send-btn" class="bg-indigo-600 text-white p-4 rounded-2xl hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
         </div>
+
+        <footer class="p-2 bg-gray-100 text-center text-[9px] text-gray-500 border-t uppercase tracking-widest font-bold">
+            Soporte de Decisiones • Basado en Evidencia CPIC
+        </footer>
     </div>
 
     <script>
-        const apiKey = ""; 
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const TABLET_MG = 5;
+        const MIN_FRACTION_MG = 1.25;
+        const apiKey = ""; // La clave se inserta en tiempo de ejecución
 
-        const TABLET_MG = 5; 
-        const MIN_FRACTION_MG = 1.25; 
-
-        let currentMode = 'IDLE'; 
-        let chatWindow = null; 
-        let tempIndication = null; 
-        let tempINR = null; 
+        let currentMode = 'IDLE';
+        let tempIndication = null;
+        let tempINR = null;
         let tempDTS = null;
 
-        window.onload = () => {
-            chatWindow = document.getElementById('chat-window');
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+        function appendMessage(sender, text, isAlert = false) {
+            const chatWindow = document.getElementById('chat-window');
+            const container = document.createElement('div');
+            container.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            const box = document.createElement('div');
+            box.className = `message-box ${sender === 'user' ? 'user-message' : 'bot-message'} ${isAlert ? 'border-2 border-red-500' : ''}`;
+            box.innerHTML = text.replace(/\n/g, '<br>');
+            container.appendChild(box);
+            chatWindow.appendChild(container);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return box;
+        }
 
-            const welcome = `
-                Hola. Soy **WarfarinAssist**. Hoy es ${formattedDate}.<br><br>
-                ¿En qué le puedo asistir?<br>
-                1. **Ajustar dosis** (Según meta de INR).<br>
+        function showInitialMenu() {
+            appendMessage('bot', `
+                Hola. Soy **WarfarinAssist**. Hoy es ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+                <br><br>
+                ¿En qué le puedo asistir hoy?<br>
+                1. **Ajustar dosis** (Según INR).<br>
                 2. **Consultar interacción**.<br>
                 3. **Análisis Avanzado ✨**.<br>
                 4. **Guía Alimentaria 🥗**.<br>
                 5. **Procedimientos y Cirugía 🔪**.
-            `;
-            appendMessage('bot', welcome);
+            `);
+            currentMode = 'IDLE';
+        }
+
+        async function fetchGemini(prompt, systemInstruction) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error('Retry');
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (e) {
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                }
+            }
+            return "Lo siento, hubo un error de conexión con la IA. Por favor, intente de nuevo.";
+        }
+
+        function processInput() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+            appendMessage('user', text);
+            input.value = '';
+
+            if (currentMode === 'IDLE') {
+                if (text.match(/1|ajust|dosis/i)) {
+                    appendMessage('bot', `Seleccione indicación clínica:<br>
+                        <button onclick="window.selInd('A')" class="btn-action">A. FA / V. Aórtica / TEV (Meta 2-3)</button>
+                        <button onclick="window.selInd('B')" class="btn-action">B. V. Mitral Mecánica (Meta 2.5-3.5)</button>
+                    `);
+                    currentMode = 'WAITING_INDICATION';
+                } else if (text.match(/2|interac/i)) {
+                    appendMessage('bot', 'Ingrese el nombre del fármaco o suplemento para analizar interacción con Warfarina:');
+                    currentMode = 'WAITING_DRUG';
+                } else if (text.match(/3|analisis|avanzado/i)) {
+                    appendMessage('bot', 'Ingrese los datos clínicos del paciente (INR, Comorbilidades, otros fármacos) para un análisis avanzado:');
+                    currentMode = 'COMPLEX_ANALYSIS_INPUT';
+                } else if (text.match(/4|diet|alimen/i)) showDiet();
+                else if (text.match(/5|ciru|proced/i)) showSurgery();
+                else appendMessage('bot', 'Elija una opción del 1 al 5.');
+            } else if (currentMode === 'WAITING_DRUG') {
+                runInteractionAnalysis(text);
+            } else if (currentMode === 'COMPLEX_ANALYSIS_INPUT') {
+                runComplexAnalysis(text);
+            } else if (currentMode === 'WAITING_INR') {
+                const val = parseFloat(text.replace(',','.'));
+                if (!isNaN(val)) {
+                    tempINR = val;
+                    appendMessage('bot', `INR: **${val}**. Ingrese la **Dosis Total Semanal (DTS)** actual en mg:`);
+                    currentMode = 'WAITING_DTS';
+                }
+            } else if (currentMode === 'WAITING_DTS') {
+                const val = parseFloat(text.replace(',','.'));
+                if (!isNaN(val)) {
+                    tempDTS = val;
+                    if (tempINR < tempIndication.min || tempINR > tempIndication.max) {
+                        appendMessage('bot', `
+                            <div class="font-bold text-red-700">⚠️ Verificación de Seguridad</div>
+                            ¿El paciente presenta algún tipo de **sangrado activo** o hematomas nuevos?
+                            <div class="flex space-x-2 mt-3">
+                                <button onclick="window.handleBleed(true)" class="btn-action text-center bg-red-600 text-white border-0">SÍ</button>
+                                <button onclick="window.handleBleed(false)" class="btn-action text-center">NO</button>
+                            </div>
+                        `);
+                        currentMode = 'WAITING_BLEED';
+                    } else finalizeAdjustment(false);
+                }
+            }
+        }
+
+        async function runInteractionAnalysis(drug) {
+            const loading = appendMessage('bot', '<span class="loading-pulse">✨ Consultando base de datos farmacológica...</span>');
+            const result = await fetchGemini(
+                `Analiza la interacción entre Warfarina y ${drug}.`,
+                "Eres un experto en cardiología y farmacología. Responde de forma concisa, indicando si aumenta o disminuye el INR, el mecanismo (ej. CYP2C9) y una recomendación clínica rápida. Usa formato Markdown."
+            );
+            loading.innerHTML = result;
+            currentMode = 'IDLE';
+            showMenuHelp();
+        }
+
+        async function runComplexAnalysis(patientData) {
+            const loading = appendMessage('bot', '<span class="loading-pulse">✨ Realizando análisis clínico avanzado...</span>');
+            const result = await fetchGemini(
+                `Analiza el siguiente caso de anticoagulación: ${patientData}`,
+                "Eres un experto cardiólogo. Resume los riesgos, sugiere una conducta y da consejos de seguridad. Sé profesional y directo. Usa formato Markdown."
+            );
+            loading.innerHTML = result;
+            currentMode = 'IDLE';
+            showMenuHelp();
+        }
+
+        window.selInd = function(type) {
+            tempIndication = type === 'A' ? { min: 2, max: 3, label: "Meta 2-3" } : { min: 2.5, max: 3.5, label: "Meta 2.5-3.5" };
+            appendMessage('bot', `Meta registrada. Ingrese el **INR** actual:`);
+            currentMode = 'WAITING_INR';
         };
 
-        function handleKeyPress(e) { if (e.key === 'Enter') processInput(null, null); }
-
-        function appendMessage(sender, text, isAlert = false) {
-            const container = document.createElement('div');
-            container.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-            const box = document.createElement('div');
-            box.className = `message-box ${sender === 'user' ? 'user-message' : 'bot-message'} ${isAlert ? 'border-2 border-red-500 shadow-md' : ''}`;
-            box.innerHTML = text;
-            container.appendChild(box);
-            chatWindow.appendChild(container);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-
-        function parseNumericInput(text) {
-            const clean = text.replace(',', '.').replace(/[^\d.]/g, '');
-            return parseFloat(clean);
-        }
-
-        function processInput(event, forcedText = null) {
-            const input = document.getElementById('user-input');
-            const userText = forcedText || input.value.trim();
-            if (!userText && !forcedText) return;
-
-            if (!forcedText) {
-                appendMessage('user', userText);
-                input.value = '';
-            }
-
-            switch (currentMode) {
-                case 'IDLE':
-                    handleMainMenu(userText);
-                    break;
-                case 'WAITING_INDICATION':
-                    const ch = userText.toUpperCase();
-                    if (ch.includes('A')) handleIndicationSelection('A');
-                    else if (ch.includes('B')) handleIndicationSelection('B');
-                    break;
-                case 'WAITING_INR':
-                    const inr = parseNumericInput(userText);
-                    if (!isNaN(inr)) {
-                        tempINR = inr;
-                        appendMessage('bot', `INR: **${inr}**. Ingrese la **DTS actual** (mg):`);
-                        currentMode = 'WAITING_DTS';
-                    } else appendMessage('bot', '⚠️ Ingrese un valor numérico.');
-                    break;
-                case 'WAITING_DTS':
-                    const dts = parseNumericInput(userText);
-                    if (!isNaN(dts)) {
-                        tempDTS = dts;
-                        if (tempINR < tempIndication.min || tempINR > tempIndication.max) {
-                            const bleedQ = `
-                                <div class="font-bold text-red-700">⚠️ Verificación de Seguridad</div>
-                                ¿Tiene el paciente **sangrado activo** o hematomas?
-                                <div class="flex space-x-3 mt-3">
-                                    <button onclick="handleBleedResponse(true)" class="btn-action bg-red-600 text-white shadow-sm text-center">SÍ</button>
-                                    <button onclick="handleBleedResponse(false)" class="btn-action bg-gray-200 text-gray-800 shadow-sm text-center">NO</button>
-                                </div>`;
-                            appendMessage('bot', bleedQ);
-                            currentMode = 'WAITING_BLEED';
-                        } else finalizeAdjustment(false);
-                    } else appendMessage('bot', '⚠️ Ingrese dosis válida.');
-                    break;
-                case 'COMPLEX_ANALYSIS_INPUT':
-                    runGeminiAnalysis(userText);
-                    break;
-                case 'WAITING_DRUG':
-                    appendMessage('bot', `Analizando interacciones para **${userText}**. Verifique con guía local.`);
-                    currentMode = 'IDLE'; showMenu();
-                    break;
-            }
-        }
-
-        function handleMainMenu(text) {
-            if (text.match(/^(1|ajustar|dosis)/i)) {
-                appendMessage('bot', `Seleccione indicación:<br><br>
-                    A. **FA / V. Aórtica / TEV** (2.0-3.0)<br>
-                    B. **Válvula Mitral Mecánica** (Meta: 2.5-3.5)
-                    <div class="flex flex-col space-y-2 mt-4">
-                        <button onclick="handleIndicationSelection('A')" class="btn-action bg-indigo-50 text-indigo-700 border-indigo-200">Opción A (Meta 2-3)</button>
-                        <button onclick="handleIndicationSelection('B')" class="btn-action bg-indigo-50 text-indigo-700 border-indigo-200">Opción B (Meta 2.5-3.5)</button>
-                    </div>`);
-                currentMode = 'WAITING_INDICATION';
-            } else if (text.match(/^(2|interaccion)/i)) {
-                appendMessage('bot', 'Ingrese el nombre del fármaco:');
-                currentMode = 'WAITING_DRUG';
-            } else if (text.match(/^(3|analisis|avanzado)/i)) {
-                appendMessage('bot', 'Ingrese: **INR | Indicación | Edad | Comorbilidades**');
-                currentMode = 'COMPLEX_ANALYSIS_INPUT';
-            } else if (text.match(/^(4|dieta|alimenta)/i)) {
-                showDietaryGuide();
-            } else if (text.match(/^(5|cirugia|procedi)/i)) {
-                showPerioperativeMenu();
-            } else showMenu();
-        }
-
-        function handleIndicationSelection(type) {
-            tempIndication = type === 'A' ? { label: "FA / V. Aórtica / TEV", min: 2.0, max: 3.0 } : { label: "Válvula Mitral Mecánica", min: 2.5, max: 3.5 };
-            appendMessage('bot', `Meta: **${tempIndication.min}-${tempIndication.max}**. Ingrese el **INR** actual:`);
-            currentMode = 'WAITING_INR';
-        }
-
-        function handleBleedResponse(hasBleeding) {
+        window.handleBleed = function(hasBleeding) {
             appendMessage('user', hasBleeding ? "Sí presenta sangrado" : "No presenta sangrado");
             finalizeAdjustment(hasBleeding);
-        }
+        };
 
         function finalizeAdjustment(hasBleeding) {
             if (hasBleeding) {
-                appendMessage('bot', `
-                    <div class="alert-critical">
-                        <h4 class="font-bold">🚨 EMERGENCIA</h4>
-                        <ul class="list-disc ml-5 mt-2 text-xs uppercase font-bold">
-                            <li>SUSPENDER Warfarina de inmediato.</li>
-                            <li>Remitir a Urgencias (Terapia de reversión).</li>
-                        </ul>
-                    </div>
-                `, true);
-            } else {
-                calculateDosePlan(tempINR, tempDTS, tempIndication.min, tempIndication.max);
+                appendMessage('bot', `<div class="p-3 bg-red-100 text-red-800 rounded-lg"><strong>🚨 EMERGENCIA:</strong> Suspender Warfarina y remitir a Urgencias de inmediato para terapia de reversión.</div>`, true);
+                currentMode = 'IDLE'; showMenuHelp();
+                return;
             }
-            currentMode = 'IDLE'; showMenu();
+            calculateAdjustment();
         }
 
-        function calculateDosePlan(inr, dts, min, max) {
+        function calculateAdjustment() {
             let change = 0, msg = "", control = "", omit = 0;
-            if (inr < min) { change = 0.15; msg = "INR bajo meta. Aumentar DTS."; control = "7 días"; }
-            else if (inr <= max) { change = 0; msg = "INR en rango terapéutico."; control = "1 mes"; }
-            else if (inr <= max + 1.5) { change = -0.15; omit = 1; msg = "INR elevado. Omitir 1 y reducir DTS."; control = "3-5 días"; }
-            else { change = -0.20; omit = 2; msg = "INR muy elevado. Omitir 2 y reducir DTS."; control = "24-48 h"; }
+            if (tempINR < tempIndication.min) { change = 0.15; msg = "INR bajo meta. Incrementar DTS."; control = "7 días"; }
+            else if (tempINR <= tempIndication.max) { change = 0; msg = "INR en rango meta. Mantener dosis."; control = "4 semanas"; }
+            else if (tempINR <= tempIndication.max + 1.5) { change = -0.15; omit = 1; msg = "INR elevado. Omitir 1 dosis y reducir DTS."; control = "3-5 días"; }
+            else { change = -0.20; omit = 2; msg = "INR muy elevado. Omitir 2 dosis y reducir DTS."; control = "24-48 h"; }
 
-            const schedule = buildWeeklySchedule(dts * (1 + change), omit);
+            const newDts = Math.round((tempDTS * (1 + change)) / MIN_FRACTION_MG) * MIN_FRACTION_MG;
+            const schedule = generateWeeklyCalendar(newDts, omit);
+
             appendMessage('bot', `
-                <div class="font-bold text-indigo-700 text-sm underline uppercase tracking-wide">Ajuste Sugerido</div>
-                <div class="grid grid-cols-2 gap-2 mt-3">
-                    <div class="p-3 bg-indigo-50 border rounded-xl text-center">
+                <div class="font-bold text-indigo-700 underline text-sm uppercase">Nuevo Plan Sugerido</div>
+                <div class="text-xs mt-1 italic">${msg}</div>
+                <div class="grid grid-cols-2 gap-2 mt-3 text-center">
+                    <div class="p-3 bg-indigo-50 border rounded-xl">
                         <div class="text-[9px] uppercase font-bold text-indigo-500">Nueva DTS</div>
-                        <div class="font-bold text-md text-indigo-900">${schedule.actualDts.toFixed(2)} mg</div>
+                        <div class="font-bold text-lg">${newDts.toFixed(2)} mg</div>
                     </div>
-                    <div class="p-3 bg-green-50 border rounded-xl text-center">
+                    <div class="p-3 bg-green-50 border rounded-xl">
                         <div class="text-[9px] uppercase font-bold text-green-500">Control</div>
-                        <div class="font-bold text-md text-green-900">${control}</div>
+                        <div class="font-bold text-md">${control}</div>
                     </div>
                 </div>
-                <div class="mt-4">${schedule.html}</div>
+                ${schedule}
             `);
+            currentMode = 'IDLE'; showMenuHelp();
         }
 
-        function buildWeeklySchedule(newDts, omitDays) {
-            const daysBase = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            const todayIdx = new Date().getDay();
-            const rotated = daysBase.slice(todayIdx).concat(daysBase.slice(0, todayIdx));
-            const roundedDts = Math.round(newDts / MIN_FRACTION_MG) * MIN_FRACTION_MG;
-            let blocks = Math.round(roundedDts / MIN_FRACTION_MG);
-            let bpd = Math.floor(blocks / 7), extra = blocks % 7;
+        function generateWeeklyCalendar(dts, omitDays) {
+            const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const today = new Date().getDay();
+            const rotated = days.slice(today).concat(days.slice(0, today));
+            
+            let blocks = Math.round(dts / MIN_FRACTION_MG);
+            let baseMg = Math.floor(blocks / 7) * MIN_FRACTION_MG;
+            let extras = blocks % 7;
+
             let html = `<table class="schedule-table"><tr><th>Día</th><th>mg</th><th>Fracción (5mg)</th></tr>`;
             for (let i = 0; i < 7; i++) {
                 const isOmit = i < omitDays;
-                let dayMg = isOmit ? 0 : (bpd + (i < (extra + omitDays) ? 1 : 0)) * MIN_FRACTION_MG;
-                html += `<tr><td>${rotated[i]}${i==0?' (Hoy)':''}</td><td>${dayMg.toFixed(2)}</td><td><strong>${formatTabDesc(dayMg, isOmit)}</strong></td></tr>`;
+                let dayMg = isOmit ? 0 : baseMg + (i < (extras + omitDays) ? MIN_FRACTION_MG : 0);
+                let desc = isOmit ? '<span class="text-red-600 font-bold">OMITIR</span>' : getTabletDesc(dayMg);
+                html += `<tr><td>${rotated[i]}${i==0?' (Hoy)':''}</td><td>${dayMg.toFixed(2)}</td><td>${desc}</td></tr>`;
             }
-            return { html: html + `</table>`, actualDts: roundedDts };
+            return html + `</table>`;
         }
 
-        function formatTabDesc(mg, omit) {
-            if (omit) return '<span class="text-red-600 font-bold uppercase">Omitir</span>';
-            const tabs = mg / TABLET_MG, whole = Math.floor(tabs), frac = Math.round((tabs - whole) * 100) / 100;
-            let parts = [];
-            if (whole > 0) parts.push(`${whole} tab${whole > 1 ? 's' : ''}`);
-            if (frac === 0.25) parts.push("¼ tab");
-            else if (frac === 0.5) parts.push("½ tab");
-            else if (frac === 0.75) parts.push("¾ tab (½+¼)");
-            return parts.join(" + ") || "0 tabs";
+        function getTabletDesc(mg) {
+            if (mg === 0) return "0 tabs";
+            const tabs = mg / 5;
+            const whole = Math.floor(tabs);
+            const frac = tabs - whole;
+            let res = whole > 0 ? `${whole} ` : "";
+            if (frac === 0.25) res += "¼";
+            else if (frac === 0.5) res += "½";
+            else if (frac === 0.75) res += "¾";
+            else if (frac === 0 && whole > 0) res = whole.toString();
+            else if (frac === 0 && whole === 0) return "0 tabs";
+            return res + " tab";
         }
 
-        function showDietaryGuide() {
+        function showDiet() {
             appendMessage('bot', `
                 <div class="font-bold text-emerald-700 text-sm">🥗 GUÍA NUTRICIONAL</div>
-                <div class="text-[10px] mt-2 space-y-2">
-                    <p class="bg-emerald-50 p-2 rounded"><strong>Regla de Oro: Consistencia.</strong> Mantenga la ingesta constante de Vitamina K. No prohíba alimentos, simplemente no cambie bruscamente su consumo semanal.</p>
-                    <p><strong>Ricos en Vitamina K:</strong> Espinacas, Brócoli, Acelgas, Col rizada (Kale), Repollo, Lechuga romana.</p>
-                    <p><strong>Precauciones Especiales:</strong></p>
-                    <ul class="list-disc ml-5">
-                        <li><strong>Alcohol:</strong> Evite el exceso (puede elevar el INR).</li>
-                        <li><strong>Productos naturales:</strong> Té verde, Ginkgo Biloba, Ginseng y Ajo concentrado pueden interferir.</li>
-                    </ul>
+                <div class="text-[11px] mt-2 space-y-2">
+                    <p class="bg-emerald-50 p-2 rounded"><strong>Consistencia:</strong> Mantenga constante la ingesta de Vitamina K semana a semana. No cambie sus hábitos alimenticios bruscamente.</p>
+                    <p><strong>Ricos en Vit. K:</strong> Espinacas, Brócoli, Repollo, Acelgas, Lechuga romana, Coles.</p>
+                    <p><strong>Precauciones:</strong> El alcohol excesivo, el Té verde y suplementos como Ginkgo Biloba pueden alterar significativamente el INR.</p>
                 </div>
             `);
-            showMenu();
+            showMenuHelp();
         }
 
-        function showPerioperativeMenu() {
+        function showSurgery() {
             appendMessage('bot', `
                 <div class="font-bold text-blue-700 text-sm">🔪 MANEJO PERIOPERATORIO</div>
-                <div class="text-[10px] mt-1 italic">Cronograma basado en el día del procedimiento (Día 0):</div>
-                <div class="flex flex-col space-y-2 mt-3">
-                    <button onclick="genPeri('LOW')" class="btn-action bg-blue-50 text-blue-700 border-blue-200">A. Bajo Riesgo (Odontología/Cataratas)</button>
-                    <button onclick="genPeri('HIGH')" class="btn-action bg-orange-50 text-orange-700 border-orange-200">B. Riesgo Mod/Alto (Cirugía/Biopsia)</button>
-                </div>`);
+                <p class="text-[11px] mt-1 mb-2">Cronograma basado en el día del procedimiento (Día 0):</p>
+                <button onclick="window.genSurg('LOW')" class="btn-action">A. Bajo Riesgo (Odontología/Cataratas)</button>
+                <button onclick="window.genSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto (Cirugía/Biopsia)</button>
+            `);
         }
 
-        function genPeri(risk) {
-            appendMessage('user', risk === 'LOW' ? "Bajo Riesgo" : "Riesgo Moderado/Alto");
+        window.genSurg = function(risk) {
+            appendMessage('user', risk === 'LOW' ? "Bajo Riesgo" : "Riesgo Mod/Alto");
             const html = risk === 'LOW' ? `
                 <div class="info-card" style="border-left-color: #10b981;">
-                    <h4 class="font-bold text-xs uppercase text-emerald-80
+                    <h4 class="font-bold text-emerald-800 text-xs uppercase">Riesgo Bajo</h4>
+                    <table class="schedule-table mt-2">
+                        <tr><th>Fase</th><th>Instrucción</th></tr>
+                        <tr><td>Día -1</td><td>Dosis habitual.</td></tr>
+                        <tr class="day-zero"><td>Día 0</td><td>Procedimiento. Tomar dosis normal.</td></tr>
+                        <tr><td>Post</td><td>Hemostasia local.</td></tr>
+                    </table>
+                </div>` : `
+                <div class="info-card" style="border-left-color: #dc2626;">
+                    <h4 class="font-bold text-red-800 text-xs uppercase text-center">Plan: Riesgo Mod/Alto</h4>
+                    <table class="schedule-table mt-2">
+                        <tr><th>Día -5</th><td>Última dosis habitual.</td></tr>
+                        <tr class="text-red-600 font-bold italic"><td>Día -4 a -2</td><td>SUSPENDER dosis.</td></tr>
+                        <tr class="bg-indigo-50"><td>Día -1</td><td>Control INR (Meta < 1.5).</td></tr>
+                        <tr class="day-zero"><td>Día 0</td><td>CIRUGÍA. No tomar dosis.</td></tr>
+                        <tr class="text-emerald-700 font-bold"><td>Día +1</td><td>Reiniciar si hay hemostasia (12-24h post-op).</td></tr>
+                    </table>
+                </div>`;
+            appendMessage('bot', html);
+            showMenuHelp();
+        };
+
+        function showMenuHelp() { setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Seleccione: **1 (Ajuste)**, **2 (Interacciones)**, **3 (Análisis)**, **4 (Dieta)** o **5 (Cirugía)**.'), 1500); }
+
+        document.getElementById('send-btn').onclick = processInput;
+        document.getElementById('user-input').onkeypress = (e) => { if (e.key === 'Enter') processInput(); };
+        window.onload = showInitialMenu;
+    </script>
+</body>
+</html>
