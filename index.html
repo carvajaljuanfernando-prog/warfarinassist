@@ -189,10 +189,74 @@
         };
 
         window.genSurg = (risk) => {
-            const html = risk === 'LOW'
-                ? `<div class="info-card" style="border-left-color: #10b981;">Riesgo Bajo: No suspender dosis. Tomar dosis normal Día 0.</div>`
-                : `<div class="info-card" style="border-left-color: #dc2626;">Riesgo Mod/Alto: Suspender Día -5. Reiniciar Día +1 si hay hemostasia estable.</div>`;
-            appendMessage('bot', html); showMenuHelp();
+    const days = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
+    const today = new Date();
+    
+    let html = '';
+    
+    if (risk === 'LOW') {
+        html += `<div class="info-card" style="border-left-color: #10b981;">
+            <strong>🔪 Riesgo Bajo</strong> (Odontología / Cataratas)<br>
+            No suspender Warfarina. Continuar dosis habitual.
+        </div>`;
+        
+        let table = `<table class="schedule-table">
+            <tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
+        
+        for (let i = -2; i <= 2; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            const dayName = days[d.getDay()];
+            const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+            let label = '', style = '';
+            
+            if (i < 0) { label = '✅ Dosis normal'; style = ''; }
+            if (i === 0) { label = '🔪 CIRUGÍA — Dosis normal'; style = ' style="background:#fef3c7;font-weight:bold;"'; }
+            if (i > 0) { label = '✅ Dosis normal'; style = ''; }
+            
+            table += `<tr${style}>
+                <td>${i === 0 ? '<strong>Día 0</strong>' : 'Día ' + (i > 0 ? '+' : '') + i}</td>
+                <td>${dayName} ${fecha}</td>
+                <td>${label}</td>
+            </tr>`;
+        }
+        table += `</table>`;
+        html += table;
+        
+    } else {
+        html += `<div class="info-card" style="border-left-color: #dc2626;">
+            <strong>🔪 Riesgo Moderado / Alto</strong> (Cirugía mayor)<br>
+            Suspender desde Día -5. Reiniciar Día +1 solo si hay hemostasia estable.
+        </div>`;
+        
+        let table = `<table class="schedule-table">
+            <tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
+        
+        for (let i = -5; i <= 3; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            const dayName = days[d.getDay()];
+            const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+            let label = '', style = '';
+            
+            if (i < 0) { label = '<span class="text-red-600 font-bold">⛔ SUSPENDER</span>'; style = ' style="background:#fef2f2;"'; }
+            if (i === 0) { label = '🔪 DÍA DE CIRUGÍA'; style = ' style="background:#fef3c7;font-weight:bold;border:2px solid #f59e0b;"'; }
+            if (i === 1) { label = '⚠️ Reiniciar si hemostasia estable'; style = ' style="background:#f0fdf4;"'; }
+            if (i > 1) { label = '✅ Reiniciar dosis habitual'; style = ' style="background:#f0fdf4;"'; }
+            
+            table += `<tr${style}>
+                <td>${i === 0 ? '<strong>Día 0</strong>' : 'Día ' + (i > 0 ? '+' : '') + i}</td>
+                <td>${dayName} ${fecha}</td>
+                <td>${label}</td>
+            </tr>`;
+        }
+        table += `</table>`;
+        html += table;
+    }
+    
+    appendMessage('bot', html);
+    showMenuHelp();
+};
         };
 
         function finalizeAdjustment(hasBleeding) { if (!hasBleeding) calculateAdjustment(); }
