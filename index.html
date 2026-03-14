@@ -35,6 +35,11 @@
         .loading-pulse { animation: pulse 1.5s infinite; color: #4f46e5; font-weight: bold; font-style: italic; font-size: 0.8rem; }
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
         .day-zero { background-color: #fef3c7; font-weight: bold; }
+        .date-input-box { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .date-input-box input[type="date"] { flex: 1; padding: 10px 14px; border: 2px solid #c7d2fe; border-radius: 12px; font-size: 0.9rem; font-family: 'Inter', sans-serif; outline: none; color: #1f2937; }
+        .date-input-box input[type="date"]:focus { border-color: #4f46e5; }
+        .date-input-box button { padding: 10px 18px; background: #4f46e5; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+        .date-input-box button:hover { background: #4338ca; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
@@ -74,10 +79,12 @@
 
     <script>
         const MIN_FRACTION_MG = 1.25;
-        // La API Key vive en Netlify de forma segura, no en este archivo.
         const PROXY_URL = "/.netlify/functions/gemini";
 
-        let currentMode = 'IDLE', tempIndication = null, tempINR = null, tempDTS = null;
+        let currentMode = 'IDLE';
+        let tempIndication = null, tempINR = null, tempDTS = null;
+        let tempSurgRisk = null; // guarda el riesgo quirúrgico mientras esperamos la fecha
+
         const chatWindow = document.getElementById('chat-window');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
@@ -144,6 +151,7 @@
             if (!text) return;
             appendMessage('user', text);
             userInput.value = '';
+
             if (currentMode === 'IDLE') {
                 if (text.match(/1|ajust|dosis/i)) {
                     appendMessage('bot', `Seleccione indicación clínica:<br><button onclick="window.selInd('A')" class="btn-action">A. FA / V. Aórtica / TEV (Meta 2-3)</button><button onclick="window.selInd('B')" class="btn-action">B. V. Mitral Mecánica (Meta 2.5-3.5)</button>`);
@@ -162,8 +170,11 @@
             else if (currentMode === 'COMPLEX_ANALYSIS_INPUT') runAdvancedAnalysis(text);
             else if (currentMode === 'WAITING_INR') {
                 const val = parseFloat(text.replace(',', '.'));
-                if (!isNaN(val)) { tempINR = val; appendMessage('bot', `INR: **${val}**. Ingrese la **Dosis Total Semanal (DTS)** en mg:`); currentMode = 'WAITING_DTS'; }
-                else appendMessage('bot', 'Ingrese un valor numérico válido para el INR.');
+                if (!isNaN(val)) {
+                    tempINR = val;
+                    appendMessage('bot', `INR: **${val}**. Ingrese la **Dosis Total Semanal (DTS)** en mg:`);
+                    currentMode = 'WAITING_DTS';
+                } else appendMessage('bot', 'Ingrese un valor numérico válido para el INR.');
             } else if (currentMode === 'WAITING_DTS') {
                 const val = parseFloat(text.replace(',', '.'));
                 if (!isNaN(val)) {
@@ -184,80 +195,135 @@
 
         window.handleBleed = (hasBleeding) => {
             appendMessage('user', hasBleeding ? "Sí presenta sangrado" : "No presenta sangrado");
-            if (hasBleeding) { appendMessage('bot', `🚨 EMERGENCIA: Suspender fármaco y remitir a Urgencias de inmediato.`, true); currentMode = 'IDLE'; showMenuHelp(); }
-            else calculateAdjustment();
+            if (hasBleeding) {
+                appendMessage('bot', `🚨 EMERGENCIA: Suspender fármaco y remitir a Urgencias de inmediato.`, true);
+                currentMode = 'IDLE'; showMenuHelp();
+            } else calculateAdjustment();
         };
 
-        window.genSurg = (risk) => {
-    const days = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
-    const today = new Date();
-    
-    let html = '';
-    
-    if (risk === 'LOW') {
-        html += `<div class="info-card" style="border-left-color: #10b981;">
-            <strong>🔪 Riesgo Bajo</strong> (Odontología / Cataratas)<br>
-            No suspender Warfarina. Continuar dosis habitual.
-        </div>`;
-        
-        let table = `<table class="schedule-table">
-            <tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
-        
-        for (let i = -2; i <= 2; i++) {
-            const d = new Date(today);
-            d.setDate(today.getDate() + i);
-            const dayName = days[d.getDay()];
-            const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-            let label = '', style = '';
-            
-            if (i < 0) { label = '✅ Dosis normal'; style = ''; }
-            if (i === 0) { label = '🔪 CIRUGÍA — Dosis normal'; style = ' style="background:#fef3c7;font-weight:bold;"'; }
-            if (i > 0) { label = '✅ Dosis normal'; style = ''; }
-            
-            table += `<tr${style}>
-                <td>${i === 0 ? '<strong>Día 0</strong>' : 'Día ' + (i > 0 ? '+' : '') + i}</td>
-                <td>${dayName} ${fecha}</td>
-                <td>${label}</td>
-            </tr>`;
+        // --- OPCIÓN 5: CIRUGÍA ---
+        function showSurgery() {
+            appendMessage('bot', `<div class="font-bold text-blue-700 text-sm">🔪 PROCEDIMIENTOS</div><button onclick="window.selSurg('LOW')" class="btn-action">A. Bajo Riesgo (Odontología / Cataratas)</button><button onclick="window.selSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto (Cirugía mayor)</button>`);
         }
-        table += `</table>`;
-        html += table;
-        
-    } else {
-        html += `<div class="info-card" style="border-left-color: #dc2626;">
-            <strong>🔪 Riesgo Moderado / Alto</strong> (Cirugía mayor)<br>
-            Suspender desde Día -5. Reiniciar Día +1 solo si hay hemostasia estable.
-        </div>`;
-        
-        let table = `<table class="schedule-table">
-            <tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
-        
-        for (let i = -5; i <= 3; i++) {
-            const d = new Date(today);
-            d.setDate(today.getDate() + i);
-            const dayName = days[d.getDay()];
-            const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-            let label = '', style = '';
-            
-            if (i < 0) { label = '<span class="text-red-600 font-bold">⛔ SUSPENDER</span>'; style = ' style="background:#fef2f2;"'; }
-            if (i === 0) { label = '🔪 DÍA DE CIRUGÍA'; style = ' style="background:#fef3c7;font-weight:bold;border:2px solid #f59e0b;"'; }
-            if (i === 1) { label = '⚠️ Reiniciar si hemostasia estable'; style = ' style="background:#f0fdf4;"'; }
-            if (i > 1) { label = '✅ Reiniciar dosis habitual'; style = ' style="background:#f0fdf4;"'; }
-            
-            table += `<tr${style}>
-                <td>${i === 0 ? '<strong>Día 0</strong>' : 'Día ' + (i > 0 ? '+' : '') + i}</td>
-                <td>${dayName} ${fecha}</td>
-                <td>${label}</td>
-            </tr>`;
-        }
-        table += `</table>`;
-        html += table;
-    }
-    
-    appendMessage('bot', html);
-    showMenuHelp();
-};
 
+        // Paso 1: usuario elige riesgo → guardamos y pedimos fecha
+        window.selSurg = (risk) => {
+            tempSurgRisk = risk;
+            const label = risk === 'LOW' ? 'Bajo Riesgo' : 'Riesgo Mod/Alto';
+            appendMessage('user', label);
+
+            // Mostramos selector de fecha con un widget inline
+            const today = new Date().toISOString().split('T')[0];
+            const container = document.createElement('div');
+            container.className = 'flex justify-start';
+            const box = document.createElement('div');
+            box.className = 'message-box bot-message';
+            box.innerHTML = `
+                <strong>📅 ¿Cuál es la fecha de la cirugía?</strong><br>
+                <div class="date-input-box">
+                    <input type="date" id="surg-date-input" min="${today}" value="${today}">
+                    <button onclick="window.confirmSurgDate()">Confirmar</button>
+                </div>`;
+            container.appendChild(box);
+            chatWindow.appendChild(container);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            currentMode = 'WAITING_SURG_DATE';
+        };
+
+        // Paso 2: usuario confirma fecha → generamos calendario
+        window.confirmSurgDate = () => {
+            const input = document.getElementById('surg-date-input');
+            if (!input || !input.value) {
+                appendMessage('bot', 'Por favor seleccione una fecha válida.');
+                return;
+            }
+            const surgDate = new Date(input.value + 'T12:00:00'); // evitar desfase de zona horaria
+            const formatted = surgDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            appendMessage('user', `Fecha de cirugía: ${formatted}`);
+            genSurgCalendar(tempSurgRisk, surgDate);
+            currentMode = 'IDLE';
+        };
+
+        // Paso 3: generar el calendario según fecha y riesgo
+        function genSurgCalendar(risk, surgDate) {
+            const days = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+            let html = '';
+
+            if (risk === 'LOW') {
+                html += `<div class="info-card" style="border-left-color: #10b981;">
+                    <strong>✅ Riesgo Bajo</strong> (Odontología / Cataratas)<br>
+                    No suspender Warfarina. Continuar dosis habitual antes y después.
+                </div>`;
+
+                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
+                for (let i = -2; i <= 2; i++) {
+                    const d = new Date(surgDate);
+                    d.setDate(surgDate.getDate() + i);
+                    const dayName = days[d.getDay()];
+                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    const isToday = d.toDateString() === new Date().toDateString();
+
+                    let label, rowStyle = '';
+                    if (i === 0) {
+                        label = '🔪 CIRUGÍA — Dosis normal';
+                        rowStyle = ' style="background:#fef3c7;font-weight:bold;"';
+                    } else {
+                        label = '✅ Dosis normal';
+                    }
+
+                    table += `<tr${rowStyle}>
+                        <td>${i === 0 ? '<strong>Día 0</strong>' : (i > 0 ? 'Día +' : 'Día ') + i}${isToday ? ' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>' : ''}</td>
+                        <td>${dayName} ${fecha}</td>
+                        <td>${label}</td>
+                    </tr>`;
+                }
+                table += `</table>`;
+                html += table;
+
+            } else {
+                html += `<div class="info-card" style="border-left-color: #dc2626;">
+                    <strong>⚠️ Riesgo Moderado / Alto</strong> (Cirugía mayor)<br>
+                    Suspender Warfarina desde Día -5. Reiniciar Día +1 solo si hemostasia estable.
+                </div>`;
+
+                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
+                for (let i = -5; i <= 3; i++) {
+                    const d = new Date(surgDate);
+                    d.setDate(surgDate.getDate() + i);
+                    const dayName = days[d.getDay()];
+                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    const isToday = d.toDateString() === new Date().toDateString();
+
+                    let label, rowStyle = '';
+                    if (i < 0) {
+                        label = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>';
+                        rowStyle = ' style="background:#fef2f2;"';
+                    } else if (i === 0) {
+                        label = '🔪 DÍA DE CIRUGÍA';
+                        rowStyle = ' style="background:#fef3c7;font-weight:bold;border:2px solid #f59e0b;"';
+                    } else if (i === 1) {
+                        label = '⚠️ Reiniciar si hemostasia estable';
+                        rowStyle = ' style="background:#f0fdf4;"';
+                    } else {
+                        label = '✅ Reiniciar dosis habitual';
+                        rowStyle = ' style="background:#f0fdf4;"';
+                    }
+
+                    table += `<tr${rowStyle}>
+                        <td>${i === 0 ? '<strong>Día 0</strong>' : (i > 0 ? 'Día +' : 'Día ') + i}${isToday ? ' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>' : ''}</td>
+                        <td>${dayName} ${fecha}</td>
+                        <td>${label}</td>
+                    </tr>`;
+                }
+                table += `</table>`;
+                html += table;
+            }
+
+            appendMessage('bot', html);
+            showMenuHelp();
+        }
+
+        // --- AJUSTE DE DOSIS ---
         function finalizeAdjustment(hasBleeding) { if (!hasBleeding) calculateAdjustment(); }
 
         function calculateAdjustment() {
@@ -281,7 +347,7 @@
                 let mg;
                 if (i < omit) { mg = 0; }
                 else { mg = base + (extrasAssigned < extras ? MIN_FRACTION_MG : 0); if (extrasAssigned < extras) extrasAssigned++; }
-                html += `<tr${i===0?' class="day-zero"':''}><td>${rotated[i]}${i===0?' (Hoy)':''}</td><td>${mg.toFixed(2)}</td><td>${i<omit?'<span class="text-red-600 font-bold">OMITIR</span>':getFrac(mg)}</td></tr>`;
+                html += `<tr${i===0?' class="day-zero"':''}><td>${rotated[i]}${i===0?' (Hoy)':''}</td><td>${mg.toFixed(2)}</td><td>${i<omit?'<span style="color:#dc2626;font-weight:bold;">OMITIR</span>':getFrac(mg)}</td></tr>`;
             }
             return html + "</table>";
         }
@@ -294,6 +360,7 @@
             return (s.trim() || "0") + " tab";
         }
 
+        // --- IA ---
         async function runInteraction(drug) {
             currentMode = 'IDLE';
             const loading = appendMessage('bot', '<span class="loading-pulse">✨ Consultando farmacopea con IA...</span>');
@@ -314,9 +381,14 @@
             loading.innerHTML = renderMarkdown(result); showMenuHelp();
         }
 
-        function showDiet() { appendMessage('bot', `🥗 **Nota Nutricional:** Mantenga consistencia en Vitamina K. No prohíba vegetales verdes, mantenga ingesta estable.`); showMenuHelp(); }
-        function showSurgery() { appendMessage('bot', `<div class="font-bold text-blue-700 text-sm">🔪 PROCEDIMIENTOS</div><button onclick="window.genSurg('LOW')" class="btn-action">A. Bajo Riesgo (Odontología/Cataratas)</button><button onclick="window.genSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto (Cirugía mayor)</button>`); }
-        function showMenuHelp() { setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija: 1, 2, 3, 4 o 5.'), 1500); }
+        function showDiet() {
+            appendMessage('bot', `🥗 **Nota Nutricional:** Mantenga consistencia en Vitamina K. No prohíba vegetales verdes, mantenga ingesta estable.`);
+            showMenuHelp();
+        }
+
+        function showMenuHelp() {
+            setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija: 1, 2, 3, 4 o 5.'), 1500);
+        }
 
         function initApp() {
             sendBtn.onclick = processInput;
