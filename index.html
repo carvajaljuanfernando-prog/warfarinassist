@@ -75,7 +75,7 @@
                 </button>
             </div>
         </div>
-        <footer class="p-2 bg-gray-100 text-center text-[9px] text-gray-500 border-t uppercase tracking-widest font-bold">Soporte de Decisiones • Gemini 2.5 Flash Engine</footer>
+        <footer class="p-2 bg-gray-100 text-center text-[9px] text-gray-500 border-t uppercase tracking-widest font-bold">Soporte de Decisiones • Gemini 1.5 Flash Engine</footer>
     </div>
 
     <script>
@@ -101,16 +101,32 @@
 
         async function callGeminiAPI(prompt, systemInstruction) {
             if (!apiKey) return "⚠️ Error de configuración.";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemInstruction }] } };
+            // Cambiamos a gemini-1.5-flash para mayor estabilidad
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            const payload = { 
+                contents: [{ parts: [{ text: prompt }] }], 
+                systemInstruction: { parts: [{ text: systemInstruction }] } 
+            };
+
             for (let i = 0; i < 5; i++) {
                 try {
-                    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error();
-                    const result = await response.json(); return result.candidates?.[0]?.content?.parts?.[0]?.text;
-                } catch (e) { await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000)); }
+                    const response = await fetch(url, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Error detallado de API:", errorData);
+                        throw new Error();
+                    }
+                    const result = await response.json(); 
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (e) { 
+                    await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000)); 
+                }
             }
-            return "⚠️ Error de conexión con la IA.";
+            return "⚠️ Error de conexión con la IA. Por favor, verifique si su API Key es correcta o si tiene conexión a internet.";
         }
 
         function processInput() {
@@ -120,8 +136,8 @@
                 if (text.match(/1|ajust|dosis/i)) {
                     appendMessage('bot', `Seleccione indicación clínica:<br><button onclick="window.selInd('A')" class="btn-action">A. FA / V. Aórtica / TEV (Meta 2-3)</button><button onclick="window.selInd('B')" class="btn-action">B. V. Mitral Mecánica (Meta 2.5-3.5)</button>`);
                     currentMode = 'WAITING_INDICATION';
-                } else if (text.match(/2|interac/i)) { appendMessage('bot', 'Ingrese el fármaco:'); currentMode = 'WAITING_DRUG'; }
-                else if (text.match(/3|analis|avanzado/i)) { appendMessage('bot', 'Ingrese el caso clínico:'); currentMode = 'COMPLEX_ANALYSIS_INPUT'; }
+                } else if (text.match(/2|interac/i)) { appendMessage('bot', 'Ingrese el fármaco o suplemento para analizar interacción:'); currentMode = 'WAITING_DRUG'; }
+                else if (text.match(/3|analis|avanzado/i)) { appendMessage('bot', 'Ingrese el caso clínico para análisis:'); currentMode = 'COMPLEX_ANALYSIS_INPUT'; }
                 else if (text.match(/4|diet|alimen/i)) showDiet();
                 else if (text.match(/5|ciru|proced/i)) showSurgery();
                 else appendMessage('bot', 'Elija una opción del 1 al 5.');
@@ -150,12 +166,12 @@
 
         window.handleBleed = (hasBleeding) => {
             appendMessage('user', hasBleeding ? "Sí presenta sangrado" : "No presenta sangrado");
-            if (hasBleeding) { appendMessage('bot', `🚨 EMERGENCIA: Remitir a Urgencias.`, true); currentMode = 'IDLE'; showMenuHelp(); }
+            if (hasBleeding) { appendMessage('bot', `🚨 EMERGENCIA: Remitir a Urgencias de inmediato.`, true); currentMode = 'IDLE'; showMenuHelp(); }
             else calculateAdjustment();
         };
 
         window.genSurg = (risk) => {
-            const html = risk === 'LOW' ? `<div class="info-card" style="border-left-color: #10b981;">Riesgo Bajo: No suspender.</div>` : `<div class="info-card" style="border-left-color: #dc2626;">Riesgo Mod/Alto: Suspender Día -5. Reiniciar Día +1 si hay hemostasia.</div>`;
+            const html = risk === 'LOW' ? `<div class="info-card" style="border-left-color: #10b981;">Riesgo Bajo: No suspender. Dosis normal Día 0.</div>` : `<div class="info-card" style="border-left-color: #dc2626;">Riesgo Mod/Alto: Suspender Día -5. Reiniciar Día +1 si hay hemostasia.</div>`;
             appendMessage('bot', html); showMenuHelp();
         };
 
@@ -183,7 +199,7 @@
             let html = `<table class="schedule-table"><tr><th>Día</th><th>mg</th><th>Fracción</th></tr>`;
             for(let i=0; i<7; i++) {
                 let mg = i < omit ? 0 : base + (i < (extras + omit) ? MIN_FRACTION_MG : 0);
-                html += `<tr><td>${rotated[i]}</td><td>${mg.toFixed(2)}</td><td>${i < omit ? 'OMITIR' : getFrac(mg)}</td></tr>`;
+                html += `<tr><td>${rotated[i]}${i==0?' (Hoy)':''}</td><td>${mg.toFixed(2)}</td><td>${i < omit ? '<span class="text-red-600 font-bold">OMITIR</span>' : getFrac(mg)}</td></tr>`;
             }
             return html + "</table>";
         }
@@ -198,18 +214,18 @@
 
         async function runInteraction(drug) {
             const loading = appendMessage('bot', '<span class="loading-pulse">✨ Consultando IA...</span>');
-            const result = await callGeminiAPI(`Interacción Warfarina y ${drug}.`, "Experto cardiólogo. Mecanismo y efecto en INR. Conciso. Markdown.");
+            const result = await callGeminiAPI(`Analiza interacción entre Warfarina y ${drug}.`, "Experto cardiólogo. Mecanismo y efecto en INR. Conciso. Markdown.");
             loading.innerHTML = result; currentMode = 'IDLE'; showMenuHelp();
         }
 
         async function runAdvancedAnalysis(data) {
-            const loading = appendMessage('bot', '<span class="loading-pulse">✨ Analizando...</span>');
+            const loading = appendMessage('bot', '<span class="loading-pulse">✨ Realizando análisis clínico...</span>');
             const result = await callGeminiAPI(`Caso: ${data}`, "Experto cardiólogo. Resumen de riesgos y conducta sugerida. Markdown profesional.");
             loading.innerHTML = result; currentMode = 'IDLE'; showMenuHelp();
         }
 
         function showDiet() { appendMessage('bot', `🥗 Consistencia en Vitamina K. No prohíba alimentos verdes.`); showMenuHelp(); }
-        function showSurgery() { appendMessage('bot', `<button onclick="window.genSurg('LOW')" class="btn-action">A. Riesgo Bajo</button><button onclick="window.genSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto</button>`); }
+        function showSurgery() { appendMessage('bot', `<div class="font-bold text-blue-700 text-sm">🔪 PROCEDIMIENTOS</div><button onclick="window.genSurg('LOW')" class="btn-action">A. Bajo Riesgo</button><button onclick="window.genSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto</button>`); }
         function showMenuHelp() { setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija: 1 a 5.'), 1500); }
         function initApp() { sendBtn.onclick = processInput; userInput.onkeypress = (e) => { if (e.key === 'Enter') processInput(); }; showInitialMenu(); }
         window.onload = initApp;
