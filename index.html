@@ -28,10 +28,11 @@
         .schedule-table th { background-color: #f9fafb; font-weight: 700; color: #374151; }
         .btn-action { display: block; width: 100%; padding: 12px; margin-top: 8px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; font-weight: 600; color: #4f46e5; text-align: left; transition: all 0.2s; cursor: pointer; }
         .btn-action:hover { background-color: #eef2ff; border-color: #4f46e5; }
-        .info-card { border-left: 4px solid #4f46e5; padding: 12px; margin: 12px 0; background-color: #f5f3ff; border-radius: 0 12px 12px 0; }
-        .info-card-green { border-left: 4px solid #10b981; padding: 12px; margin: 12px 0; background-color: #f0fdf4; border-radius: 0 12px 12px 0; }
-        .info-card-yellow { border-left: 4px solid #f59e0b; padding: 12px; margin: 12px 0; background-color: #fffbeb; border-radius: 0 12px 12px 0; }
-        .info-card-red { border-left: 4px solid #dc2626; padding: 12px; margin: 12px 0; background-color: #fef2f2; border-radius: 0 12px 12px 0; }
+        .info-card { border-left: 4px solid #4f46e5; padding: 12px; margin: 8px 0; background-color: #f5f3ff; border-radius: 0 12px 12px 0; }
+        .info-card-green { border-left: 4px solid #10b981; padding: 12px; margin: 8px 0; background-color: #f0fdf4; border-radius: 0 12px 12px 0; }
+        .info-card-yellow { border-left: 4px solid #f59e0b; padding: 12px; margin: 8px 0; background-color: #fffbeb; border-radius: 0 12px 12px 0; }
+        .info-card-red { border-left: 4px solid #dc2626; padding: 12px; margin: 8px 0; background-color: #fef2f2; border-radius: 0 12px 12px 0; }
+        .info-card-blue { border-left: 4px solid #3b82f6; padding: 12px; margin: 8px 0; background-color: #eff6ff; border-radius: 0 12px 12px 0; }
         .purpose-box { background-color: #ffffff; border-bottom: 2px solid #e5e7eb; padding: 16px 24px; font-size: 0.8rem; color: #4b5563; }
         .caution-tag { color: #dc2626; font-weight: 800; text-transform: uppercase; }
         .logo-container { width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); flex-shrink: 0; }
@@ -41,9 +42,13 @@
         .date-input-box { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
         .date-input-box input[type="date"] { flex: 1; padding: 10px 14px; border: 2px solid #c7d2fe; border-radius: 12px; font-size: 0.9rem; font-family: 'Inter', sans-serif; outline: none; color: #1f2937; }
         .date-input-box input[type="date"]:focus { border-color: #4f46e5; }
-        .date-input-box button { padding: 10px 18px; background: #4f46e5; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+        .date-input-box button { padding: 10px 18px; background: #4f46e5; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
         .date-input-box button:hover { background: #4338ca; }
-        .guide-tag { font-size: 0.65rem; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 999px; font-weight: 700; margin-left: 4px; vertical-align: middle; }
+        .nomogram-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.78rem; border-radius: 8px; overflow: hidden; }
+        .nomogram-table th, .nomogram-table td { border: 1px solid #e5e7eb; padding: 8px; text-align: center; }
+        .nomogram-table th { background-color: #4f46e5; color: white; font-weight: 700; }
+        .nomogram-table tr:nth-child(even) { background-color: #f9fafb; }
+        .highlight-row { background-color: #fef3c7 !important; font-weight: bold; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
@@ -72,7 +77,7 @@
         <div id="chat-window"></div>
         <div class="p-4 bg-white border-t shrink-0">
             <div class="flex space-x-3">
-                <input type="text" id="user-input" placeholder="Escriba aquí (ej. 1 o Dosis)" class="flex-grow p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                <input type="text" id="user-input" placeholder="Escriba aquí (ej. 1 o Inicio)" class="flex-grow p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                 <button id="send-btn" class="bg-indigo-600 text-white p-4 rounded-2xl hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                 </button>
@@ -88,6 +93,7 @@
         let currentMode = 'IDLE';
         let tempIndication = null, tempINR = null, tempDTS = null;
         let tempSurgRisk = null;
+        let tempNomoDose = null; // 5mg o 10mg para nomograma
 
         const chatWindow = document.getElementById('chat-window');
         const userInput = document.getElementById('user-input');
@@ -118,7 +124,14 @@
         }
 
         function showInitialMenu() {
-            appendMessage('bot', `Hola. Soy **WarfarinAssist**. Hoy es ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.<br><br>¿En qué le puedo asistir?<br>1. **Ajustar dosis** (Según INR).<br>2. **Consultar interacción**.<br>3. **Análisis Avanzado ✨**.<br>4. **Guía Alimentaria 🥗**.<br>5. **Procedimientos y Cirugía 🔪**.`);
+            appendMessage('bot', `Hola. Soy **WarfarinAssist**. Hoy es ${new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.<br><br>¿En qué le puedo asistir?<br><br>
+1. 💊 **Inicio de Warfarina** (Nomograma)<br>
+2. 📊 **Ajustar dosis** (Según INR)<br>
+3. 🔬 **Consultar interacción**<br>
+4. ✨ **Análisis Avanzado**<br>
+5. 🥗 **Guía Alimentaria**<br>
+6. ⏱️ **Duración anticoagulación TEV**<br>
+7. 🔪 **Procedimientos y Cirugía**`);
             currentMode = 'IDLE';
         }
 
@@ -130,21 +143,19 @@
             for (let i = 0; i < 5; i++) {
                 try {
                     const response = await fetch(PROXY_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     if (!response.ok) {
                         const errorData = await response.json();
-                        if (response.status === 400 || response.status === 403) {
-                            return `⚠️ **Error de configuración (${response.status}):** ${errorData.error?.message || "Verifique la API Key en el panel de Netlify."}`;
-                        }
+                        if (response.status === 400 || response.status === 403)
+                            return `⚠️ **Error de configuración (${response.status}):** ${errorData.error?.message || "Verifique la API Key en Netlify."}`;
                         throw new Error(`Status ${response.status}`);
                     }
                     const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "No se recibió una respuesta clara de la IA.";
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "No se recibió respuesta de la IA.";
                 } catch (e) {
-                    if (i === 4) return `⚠️ **Error de conexión** después de 5 intentos. Verifique su internet.\n\nDetalle: ${e.message}`;
+                    if (i === 4) return `⚠️ **Error de conexión** después de 5 intentos.\n\nDetalle: ${e.message}`;
                     await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000));
                 }
             }
@@ -157,20 +168,19 @@
             userInput.value = '';
 
             if (currentMode === 'IDLE') {
-                if (text.match(/1|ajust|dosis/i)) {
+                if (text.match(/^1$|inicio|nomograma|iniciar/i)) showNomogramIntro();
+                else if (text.match(/^2$|ajust|dosis/i)) {
                     appendMessage('bot', `Seleccione indicación clínica:<br>
                         <button onclick="window.selInd('A')" class="btn-action">A. FA / V. Aórtica / TEV (Meta INR 2–3)</button>
                         <button onclick="window.selInd('B')" class="btn-action">B. V. Mitral Mecánica (Meta INR 2.5–3.5)</button>`);
                     currentMode = 'WAITING_INDICATION';
-                } else if (text.match(/2|interac/i)) {
-                    appendMessage('bot', 'Ingrese el fármaco o suplemento para analizar interacción:');
-                    currentMode = 'WAITING_DRUG';
-                } else if (text.match(/3|analis|avanzado/i)) {
-                    appendMessage('bot', 'Ingrese el caso clínico para análisis:');
-                    currentMode = 'COMPLEX_ANALYSIS_INPUT';
-                } else if (text.match(/4|diet|alimen/i)) showDiet();
-                else if (text.match(/5|ciru|proced/i)) showSurgery();
-                else appendMessage('bot', 'Elija una opción del 1 al 5.');
+                }
+                else if (text.match(/^3$|interac/i)) { appendMessage('bot', 'Ingrese el fármaco o suplemento para analizar interacción:'); currentMode = 'WAITING_DRUG'; }
+                else if (text.match(/^4$|analis|avanzado/i)) { appendMessage('bot', 'Ingrese el caso clínico para análisis:'); currentMode = 'COMPLEX_ANALYSIS_INPUT'; }
+                else if (text.match(/^5$|diet|alimen/i)) showDiet();
+                else if (text.match(/^6$|duraci|tiempo|tev/i)) showTEVDuration();
+                else if (text.match(/^7$|ciru|proced/i)) showSurgery();
+                else appendMessage('bot', 'Elija una opción del 1 al 7.');
             }
             else if (currentMode === 'WAITING_DRUG') runInteraction(text);
             else if (currentMode === 'COMPLEX_ANALYSIS_INPUT') runAdvancedAnalysis(text);
@@ -181,25 +191,106 @@
                     appendMessage('bot', `INR registrado: **${val}**.<br>Ingrese la **Dosis Total Semanal (DTS) actual** en mg:`);
                     currentMode = 'WAITING_DTS';
                 } else appendMessage('bot', 'Ingrese un valor numérico válido para el INR (ej: 2.4).');
-            } else if (currentMode === 'WAITING_DTS') {
+            }
+            else if (currentMode === 'WAITING_DTS') {
                 const val = parseFloat(text.replace(',', '.'));
                 if (!isNaN(val) && val > 0) {
                     tempDTS = val;
-                    // Verificar sangrado solo si INR fuera de rango
                     if (tempINR < tempIndication.min || tempINR > tempIndication.max) {
-                        appendMessage('bot', `<div class="info-card-red"><strong>⚠️ Verificación de Seguridad</strong><br>INR fuera de rango terapéutico.<br>¿Presenta el paciente sangrado activo o hematomas?</div>
+                        appendMessage('bot', `<div class="info-card-red"><strong>⚠️ Verificación de Seguridad</strong><br>INR fuera de rango terapéutico.<br>¿Presenta sangrado activo o hematomas?</div>
                             <div class="flex space-x-2 mt-2">
-                                <button onclick="window.handleBleed(true)" class="btn-action text-center bg-red-600 text-white border-0">SÍ — Hay sangrado</button>
+                                <button onclick="window.handleBleed(true)" class="btn-action bg-red-600 text-white border-0 text-center">SÍ — Hay sangrado</button>
                                 <button onclick="window.handleBleed(false)" class="btn-action text-center">NO — Sin sangrado</button>
                             </div>`);
                         currentMode = 'WAITING_BLEED';
-                    } else {
-                        calculateAdjustment();
-                    }
+                    } else calculateAdjustment();
                 } else appendMessage('bot', 'Ingrese un valor numérico válido para la DTS (ej: 35).');
             }
         }
 
+        // =============================================
+        // OPCIÓN 1 — INICIO DE WARFARINA (NOMOGRAMA)
+        // =============================================
+        function showNomogramIntro() {
+            appendMessage('bot', `<div class="info-card-blue"><strong>💊 Inicio de Warfarina — Evaluación de Factores de Riesgo</strong><br>
+            Para seleccionar el nomograma adecuado (5mg vs 10mg) se evaluarán factores que reducen la dosis inicial.</div>
+            <br>¿Presenta el paciente alguno de estos factores?<br>
+            <button onclick="window.nomoFactor('HIGH_RISK')" class="btn-action">⚠️ Sí — Edad >75 años / Desnutrición / Hepatopatía / ICC / Medicamentos inhibidores / Alto riesgo hemorrágico</button>
+            <button onclick="window.nomoFactor('LOW_RISK')" class="btn-action">✅ No — Paciente ambulatorio sano, sin factores de riesgo</button>`);
+            currentMode = 'WAITING_NOMO_RISK';
+        }
+
+        window.nomoFactor = (risk) => {
+            appendMessage('user', risk === 'HIGH_RISK' ? 'Sí, presenta factores de riesgo' : 'No, sin factores de riesgo');
+            tempNomoDose = risk === 'HIGH_RISK' ? 5 : 10;
+            const label = risk === 'HIGH_RISK' ? '5 mg' : '10 mg';
+
+            let html = `<div class="info-card-blue">
+                <strong>📋 Nomograma de Inicio: Warfarina ${label}/día</strong><br>
+                Iniciar junto con <strong>HBPM o HNF</strong> el mismo día del diagnóstico de TEV.<br>
+                Suspender heparina cuando INR ≥2.0 por ≥2 días consecutivos (mínimo 5 días de solapamiento).<br><br>
+                <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 2</span>
+            </div>`;
+
+            if (tempNomoDose === 5) {
+                html += `<table class="nomogram-table">
+                    <tr><th>Día</th><th>INR</th><th>Dosis (mg)</th></tr>
+                    <tr><td>1</td><td>—</td><td>5</td></tr>
+                    <tr><td>2</td><td>—</td><td>5</td></tr>
+                    <tr><td rowspan="4">3</td><td>&lt;1.5</td><td>10</td></tr>
+                    <tr><td>1.5–1.9</td><td>5</td></tr>
+                    <tr><td>2.0–3.0</td><td>2.5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                    <tr><td rowspan="4">4</td><td>&lt;1.5</td><td>10</td></tr>
+                    <tr><td>1.5–1.9</td><td>7.5</td></tr>
+                    <tr><td>2.0–3.0</td><td>5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                    <tr><td rowspan="3">5</td><td>&lt;2.0</td><td>10</td></tr>
+                    <tr><td>2.0–3.0</td><td>5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                    <tr><td rowspan="4">6</td><td>&lt;1.5</td><td>12.5</td></tr>
+                    <tr><td>1.5–1.9</td><td>10</td></tr>
+                    <tr><td>2.0–3.0</td><td>7.5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                </table>`;
+            } else {
+                html += `<table class="nomogram-table">
+                    <tr><th>Día</th><th>INR</th><th>Dosis (mg)</th></tr>
+                    <tr><td>1</td><td>—</td><td>10</td></tr>
+                    <tr><td>2</td><td>—</td><td>10</td></tr>
+                    <tr><td rowspan="4">3</td><td>&lt;1.5</td><td>15</td></tr>
+                    <tr><td>1.5–1.9</td><td>10</td></tr>
+                    <tr><td>2.0–3.0</td><td>5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                    <tr><td rowspan="4">4</td><td>&lt;1.5</td><td>15</td></tr>
+                    <tr><td>1.5–1.9</td><td>10</td></tr>
+                    <tr><td>2.0–3.0</td><td>7.5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                    <tr><td rowspan="3">5</td><td>&lt;2.0</td><td>15</td></tr>
+                    <tr><td>2.0–3.0</td><td>7.5</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                    <tr><td rowspan="4">6</td><td>&lt;1.5</td><td>17.5</td></tr>
+                    <tr><td>1.5–1.9</td><td>12.5</td></tr>
+                    <tr><td>2.0–3.0</td><td>10</td></tr>
+                    <tr><td>&gt;3.0</td><td>0</td></tr>
+                </table>`;
+            }
+
+            html += `<div class="info-card-yellow" style="margin-top:10px;">
+                <strong>⚠️ Recordatorios clave:</strong><br>
+                • Medir INR diariamente desde el Día 3.<br>
+                • Meta: INR ≥2.0 antes de suspender heparina (mínimo 5 días de solapamiento).<br>
+                • No usar test farmacogenómico de rutina para dosis inicial.
+            </div>`;
+
+            appendMessage('bot', html);
+            currentMode = 'IDLE';
+            showMenuHelp();
+        };
+
+        // =============================================
+        // OPCIÓN 2 — AJUSTE DE DOSIS
+        // =============================================
         window.selInd = (type) => {
             tempIndication = type === 'A'
                 ? { min: 2.0, max: 3.0, label: "Meta INR 2–3", minorLow: 1.7, minorHigh: 3.3 }
@@ -215,133 +306,74 @@
                     <strong>🚨 SANGRADO ACTIVO — Conducta urgente</strong><br><br>
                     <strong>1.</strong> Suspender Warfarina inmediatamente.<br>
                     <strong>2.</strong> Administrar Vitamina K 5–10 mg IV lento.<br>
-                    <strong>3.</strong> Considerar CCP 4 factores (concentrado de complejo protrombínico) para reversión rápida.<br>
+                    <strong>3.</strong> Considerar CCP 4 factores para reversión rápida.<br>
                     <strong>4.</strong> Remitir a Urgencias de inmediato.<br><br>
                     <span style="font-size:0.75rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 5</span>
                 </div>`, true);
-                currentMode = 'IDLE';
-                showMenuHelp();
-            } else {
-                calculateAdjustment();
-            }
+                currentMode = 'IDLE'; showMenuHelp();
+            } else calculateAdjustment();
         };
 
-        // =============================================
-        // LÓGICA CLÍNICA CORREGIDA SEGÚN GUÍA 2016
-        // =============================================
         function calculateAdjustment() {
-            const inr = tempINR;
-            const min = tempIndication.min;
-            const max = tempIndication.max;
-            // Límites de variación menor (±0.3 unidades del rango)
-            const minorLow = tempIndication.minorLow;   // min - 0.3
-            const minorHigh = tempIndication.minorHigh; // max + 0.3
-
+            const inr = tempINR, min = tempIndication.min, max = tempIndication.max;
+            const minorLow = tempIndication.minorLow, minorHigh = tempIndication.minorHigh;
             let change = 0, omit = 0, title = '', cardClass = 'info-card', vitK = '', nextINR = '', msg = '';
 
-            // --- CASO 1: INR en rango terapéutico ---
             if (inr >= min && inr <= max) {
-                title = '✅ INR en Rango Terapéutico';
-                cardClass = 'info-card-green';
+                title = '✅ INR en Rango Terapéutico'; cardClass = 'info-card-green';
                 msg = 'Mantener la DTS actual. No se requiere ajuste.';
                 nextINR = 'Repetir INR en <strong>4–6 semanas</strong> si control estable.';
-                change = 0;
-
-            // --- CASO 2: INR levemente fuera de rango (≤0.3 unidades) ---
             } else if (inr >= minorLow && inr < min) {
-                title = '⚠️ INR Levemente Bajo (variación menor)';
-                cardClass = 'info-card-yellow';
-                msg = 'Variación ≤0.3 unidades bajo el rango. <strong>No ajustar dosis</strong> — probablemente variación aleatoria.';
+                title = '⚠️ INR Levemente Bajo (≤0.3 unidades)'; cardClass = 'info-card-yellow';
+                msg = '<strong>No ajustar dosis</strong> — probable variación aleatoria.';
                 nextINR = 'Repetir INR en <strong>7–14 días</strong> sin cambiar dosis.';
-                change = 0;
-
             } else if (inr > max && inr <= minorHigh) {
-                title = '⚠️ INR Levemente Elevado (variación menor)';
-                cardClass = 'info-card-yellow';
-                msg = 'Variación ≤0.3 unidades sobre el rango. <strong>No ajustar dosis</strong> — probablemente variación aleatoria.';
+                title = '⚠️ INR Levemente Elevado (≤0.3 unidades)'; cardClass = 'info-card-yellow';
+                msg = '<strong>No ajustar dosis</strong> — probable variación aleatoria.';
                 nextINR = 'Repetir INR en <strong>7–14 días</strong> sin cambiar dosis.';
-                change = 0;
-
-            // --- CASO 3: INR persistentemente bajo ---
             } else if (inr < minorLow && inr >= min - 0.8) {
-                title = '📈 INR Bajo — Ajuste Conservador';
-                cardClass = 'info-card-yellow';
-                msg = 'INR moderadamente bajo. Aumentar DTS un <strong>5–10%</strong>.';
-                nextINR = 'Repetir INR en <strong>7–14 días</strong>.';
-                change = 0.075; // 7.5% como punto medio conservador
-
+                title = '📈 INR Bajo — Ajuste Conservador'; cardClass = 'info-card-yellow';
+                msg = 'Aumentar DTS un <strong>5–10%</strong>.';
+                nextINR = 'Repetir INR en <strong>7–14 días</strong>.'; change = 0.075;
             } else if (inr < min - 0.8) {
-                title = '📈 INR Significativamente Bajo';
-                cardClass = 'info-card-red';
-                msg = 'INR significativamente bajo. Aumentar DTS un <strong>10–15%</strong>.';
-                nextINR = 'Repetir INR en <strong>7 días</strong>.';
-                change = 0.125; // 12.5%
-
-            // --- CASO 4: INR elevado moderadamente (hasta max+1.5) ---
+                title = '📈 INR Significativamente Bajo'; cardClass = 'info-card-red';
+                msg = 'Aumentar DTS un <strong>10–15%</strong>.';
+                nextINR = 'Repetir INR en <strong>7 días</strong>.'; change = 0.125;
             } else if (inr > minorHigh && inr <= max + 1.5) {
-                title = '📉 INR Elevado — Ajuste Moderado';
-                cardClass = 'info-card-yellow';
-                omit = 1;
-                msg = `Omitir <strong>1 dosis</strong> y reducir DTS un <strong>10%</strong>.`;
-                nextINR = 'Repetir INR en <strong>7 días</strong>.';
-                change = -0.10;
-
-            // --- CASO 5: INR muy elevado (max+1.5 a 10) sin sangrado ---
+                title = '📉 INR Elevado — Ajuste Moderado'; cardClass = 'info-card-yellow';
+                omit = 1; msg = 'Omitir <strong>1 dosis</strong> y reducir DTS un <strong>10%</strong>.';
+                nextINR = 'Repetir INR en <strong>7 días</strong>.'; change = -0.10;
             } else if (inr > max + 1.5 && inr <= 10) {
-                title = '🔴 INR Muy Elevado — Acción Requerida';
-                cardClass = 'info-card-red';
-                omit = 2;
-                msg = `Omitir <strong>2 dosis</strong> y reducir DTS un <strong>15–20%</strong>.`;
-
-                if (inr > 4.5 && inr <= 10) {
-                    vitK = `<br><br><strong>💊 Vitamina K oral:</strong> Considerar 1.25–2.5 mg vía oral si INR entre 4.5–10 sin sangrado activo.`;
-                }
-                nextINR = 'Repetir INR en <strong>3–7 días</strong>.';
-                change = -0.175; // 17.5%
-
-            // --- CASO 6: INR > 10 sin sangrado ---
+                title = '🔴 INR Muy Elevado — Acción Requerida'; cardClass = 'info-card-red';
+                omit = 2; msg = 'Omitir <strong>2 dosis</strong> y reducir DTS un <strong>15–20%</strong>.';
+                if (inr > 4.5) vitK = `<br><br><strong>💊 Vitamina K oral:</strong> Considerar 1.25–2.5 mg vía oral.`;
+                nextINR = 'Repetir INR en <strong>3–7 días</strong>.'; change = -0.175;
             } else if (inr > 10) {
-                title = '🚨 INR Crítico (>10) — Sin Sangrado';
-                cardClass = 'info-card-red';
-                omit = 2;
-                msg = `Suspender Warfarina. Omitir <strong>2–3 dosis</strong> y reducir DTS un <strong>20%</strong> al reanudar.`;
+                title = '🚨 INR Crítico (>10) — Sin Sangrado'; cardClass = 'info-card-red';
+                omit = 2; msg = 'Suspender Warfarina. Omitir <strong>2–3 dosis</strong> y reducir DTS un <strong>20%</strong> al reanudar.';
                 vitK = `<br><br><strong>💊 Vitamina K oral OBLIGATORIA:</strong> Administrar <strong>2.5 mg vía oral</strong> inmediatamente.`;
-                nextINR = '<strong>Repetir INR al día siguiente</strong> tras la Vitamina K.';
-                change = -0.20;
+                nextINR = '<strong>Repetir INR al día siguiente</strong> tras la Vitamina K.'; change = -0.20;
             }
 
-            const newDts = change !== 0
-                ? Math.round((tempDTS * (1 + change)) / MIN_FRACTION_MG) * MIN_FRACTION_MG
-                : tempDTS;
+            const newDts = change !== 0 ? Math.round((tempDTS * (1 + change)) / MIN_FRACTION_MG) * MIN_FRACTION_MG : tempDTS;
 
             let html = `<div class="${cardClass}">
-                <strong>${title}</strong><br><br>
-                ${msg}${vitK}
-                <br><br>
-                <strong>DTS actual:</strong> ${tempDTS.toFixed(2)} mg →
-                <strong>Nueva DTS sugerida:</strong> ${newDts.toFixed(2)} mg
-                <br><br>
-                <strong>📅 Próximo control:</strong> ${nextINR}
-                <br><br>
+                <strong>${title}</strong><br><br>${msg}${vitK}<br><br>
+                <strong>DTS actual:</strong> ${tempDTS.toFixed(2)} mg → <strong>Nueva DTS:</strong> ${newDts.toFixed(2)} mg<br><br>
+                <strong>📅 Próximo control:</strong> ${nextINR}<br><br>
                 <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016</span>
             </div>`;
-
-            if (newDts !== tempDTS || omit > 0) {
-                html += generateSchedule(newDts, omit);
-            }
+            if (newDts !== tempDTS || omit > 0) html += generateSchedule(newDts, omit);
 
             appendMessage('bot', html);
-            currentMode = 'IDLE';
-            showMenuHelp();
+            currentMode = 'IDLE'; showMenuHelp();
         }
 
         function generateSchedule(dts, omit) {
             const days = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
             const todayIdx = new Date().getDay();
             const rotated = days.slice(todayIdx).concat(days.slice(0, todayIdx));
-            let blocks = Math.round(dts / MIN_FRACTION_MG);
-            let base = Math.floor(blocks / 7) * MIN_FRACTION_MG;
-            let extras = blocks % 7, extrasAssigned = 0;
+            let blocks = Math.round(dts / MIN_FRACTION_MG), base = Math.floor(blocks / 7) * MIN_FRACTION_MG, extras = blocks % 7, extrasAssigned = 0;
             let html = `<table class="schedule-table"><tr><th>Día</th><th>mg</th><th>Fracción</th></tr>`;
             for (let i = 0; i < 7; i++) {
                 let mg;
@@ -361,7 +393,125 @@
         }
 
         // =============================================
-        // OPCIÓN 5 — CIRUGÍA CON FECHA Y RIESGO TEV
+        // OPCIÓN 6 — DURACIÓN ANTICOAGULACIÓN TEV
+        // =============================================
+        function showTEVDuration() {
+            appendMessage('bot', `<div class="info-card-blue"><strong>⏱️ Calculadora de Duración de Anticoagulación en TEV</strong><br>
+            Seleccione el escenario clínico del paciente:</div>
+            <button onclick="window.tevScenario('PROVOKED_TRANSIENT')" class="btn-action">1. TEV provocado por factor transitorio (cirugía, inmovilización, trauma, estrógenos)</button>
+            <button onclick="window.tevScenario('UNPROVOKED_FIRST')" class="btn-action">2. TEV no provocado — Primer episodio</button>
+            <button onclick="window.tevScenario('RECURRENT')" class="btn-action">3. TEV recurrente (2 o más episodios)</button>
+            <button onclick="window.tevScenario('CANCER')" class="btn-action">4. TEV asociado a cáncer activo</button>
+            <button onclick="window.tevScenario('APS')" class="btn-action">5. TEV + Síndrome Antifosfolípido (SAF)</button>
+            <button onclick="window.tevScenario('THROMBOPHILIA')" class="btn-action">6. TEV + Trombofilia de alto riesgo (déficit Proteína C/S, Factor V Leiden homocigoto, etc.)</button>`);
+        }
+
+        window.tevScenario = (scenario) => {
+            const labels = {
+                'PROVOKED_TRANSIENT': 'TEV provocado por factor transitorio',
+                'UNPROVOKED_FIRST': 'TEV no provocado — Primer episodio',
+                'RECURRENT': 'TEV recurrente',
+                'CANCER': 'TEV + Cáncer activo',
+                'APS': 'TEV + Síndrome Antifosfolípido',
+                'THROMBOPHILIA': 'TEV + Trombofilia de alto riesgo'
+            };
+            appendMessage('user', labels[scenario]);
+
+            let html = '';
+
+            if (scenario === 'PROVOKED_TRANSIENT') {
+                html = `<div class="info-card-green">
+                    <strong>✅ TEV Provocado por Factor Transitorio</strong><br><br>
+                    <strong>⏱️ Duración recomendada: 3 meses</strong><br><br>
+                    El riesgo de recurrencia es bajo una vez resuelto el factor desencadenante.<br><br>
+                    <strong>Meta INR:</strong> 2.0–3.0<br>
+                    <strong>Anticoagulante:</strong> Warfarina o DOAC<br><br>
+                    <strong>📅 Al completar 3 meses:</strong><br>
+                    • Reevaluar si el factor desencadenante fue completamente resuelto.<br>
+                    • Si persiste el factor de riesgo → considerar extensión.<br><br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016</span>
+                </div>`;
+
+            } else if (scenario === 'UNPROVOKED_FIRST') {
+                html = `<div class="info-card-yellow">
+                    <strong>⚠️ TEV No Provocado — Primer Episodio</strong><br><br>
+                    <strong>⏱️ Duración mínima: 3–6 meses</strong><br>
+                    <strong>Considerar tratamiento indefinido</strong> según balance riesgo/beneficio.<br><br>
+                    <strong>Factores que favorecen anticoagulación indefinida:</strong><br>
+                    • Sexo masculino<br>
+                    • TEV proximal (TVP ilíaca/femoral o EP)<br>
+                    • INR inestable durante tratamiento<br>
+                    • Dímero-D elevado al mes de suspender anticoagulación<br>
+                    • Preferencia del paciente por menor riesgo de recurrencia<br><br>
+                    <strong>Factores que favorecen suspender a los 3–6 meses:</strong><br>
+                    • Sexo femenino con primer episodio de TVP distal<br>
+                    • Alto riesgo hemorrágico<br>
+                    • Preferencia del paciente<br><br>
+                    <strong>Meta INR:</strong> 2.0–3.0<br><br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016</span>
+                </div>`;
+
+            } else if (scenario === 'RECURRENT') {
+                html = `<div class="info-card-red">
+                    <strong>🔴 TEV Recurrente (≥2 episodios)</strong><br><br>
+                    <strong>⏱️ Duración: INDEFINIDA</strong><br><br>
+                    El riesgo de recurrencia tras un segundo evento es muy alto.<br>
+                    La anticoagulación indefinida está claramente indicada en la mayoría de casos.<br><br>
+                    <strong>Meta INR:</strong> 2.0–3.0<br>
+                    <strong>Anticoagulante:</strong> Warfarina o DOAC<br><br>
+                    <strong>⚠️ Reevaluar periódicamente:</strong> Al menos cada 12 meses el riesgo hemorrágico vs trombótico.<br><br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016</span>
+                </div>`;
+
+            } else if (scenario === 'CANCER') {
+                html = `<div class="info-card-red">
+                    <strong>🔴 TEV Asociado a Cáncer Activo</strong><br><br>
+                    <strong>⏱️ Duración: INDEFINIDA</strong> (mientras el cáncer esté activo)<br><br>
+                    <strong>⚠️ Anticoagulante de elección: HBPM</strong> (no Warfarina)<br>
+                    Las HBPM son superiores a Warfarina en pacientes oncológicos para prevención de recurrencia de TEV.<br><br>
+                    <strong>Alternativa:</strong> DOACs (evidencia creciente en cáncer, verificar según tipo tumoral)<br><br>
+                    <strong>Reevaluar:</strong> Si el cáncer entra en remisión completa, reconsiderar duración y cambio a Warfarina o DOAC.<br><br>
+                    <strong>⚠️ Vigilar:</strong> Mayor riesgo hemorrágico en tumores GI y genitourinarios.<br><br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 6</span>
+                </div>`;
+
+            } else if (scenario === 'APS') {
+                html = `<div class="info-card-red">
+                    <strong>🔴 TEV + Síndrome Antifosfolípido (SAF)</strong><br><br>
+                    <strong>⏱️ Duración: INDEFINIDA</strong><br><br>
+                    <strong>Anticoagulante de elección: Warfarina</strong><br>
+                    Los DOACs han mostrado falla terapéutica en SAF — <strong>NO se recomiendan</strong>.<br><br>
+                    <strong>Meta INR: 2.0–3.0</strong><br><br>
+                    <strong>⚠️ Precaución con el monitoreo INR:</strong><br>
+                    Algunos anticuerpos antifosfolípido interfieren con los ensayos de coagulación basados en fosfolípidos. Seleccionar reactivos menos sensibles a esta interferencia.<br><br>
+                    <strong>Alternativa de monitoreo:</strong> Ensayo cromogénico del Factor X si hay interferencia comprobada.<br><br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 1</span>
+                </div>`;
+
+            } else if (scenario === 'THROMBOPHILIA') {
+                html = `<div class="info-card-red">
+                    <strong>🔴 TEV + Trombofilia de Alto Riesgo</strong><br><br>
+                    <strong>⏱️ Duración: INDEFINIDA</strong><br><br>
+                    <strong>Trombofilias de alto riesgo incluyen:</strong><br>
+                    • Déficit de Proteína C o Proteína S<br>
+                    • Déficit de Antitrombina III<br>
+                    • Factor V Leiden homocigoto<br>
+                    • Mutación G20210A de Protrombina homocigota<br>
+                    • Trombofilias combinadas<br><br>
+                    <strong>Meta INR:</strong> 2.0–3.0<br>
+                    <strong>Anticoagulante:</strong> Warfarina o DOAC (según trombofilia específica)<br><br>
+                    <strong>⚠️ Reevaluar periódicamente</strong> el balance riesgo hemorrágico vs trombótico.<br><br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016</span>
+                </div>`;
+            }
+
+            appendMessage('bot', html);
+            currentMode = 'IDLE';
+            showMenuHelp();
+        };
+
+        // =============================================
+        // OPCIÓN 7 — CIRUGÍA
         // =============================================
         function showSurgery() {
             appendMessage('bot', `<div class="font-bold text-blue-700 text-sm mb-2">🔪 MANEJO PERIOPERATORIO DE WARFARINA</div>
@@ -372,16 +522,12 @@
         window.selSurg = (risk) => {
             tempSurgRisk = risk;
             appendMessage('user', risk === 'LOW' ? 'Bajo Riesgo hemorrágico' : 'Riesgo Moderado/Alto');
-
             if (risk === 'HIGH') {
-                // Preguntar riesgo TEV antes de la fecha
-                appendMessage('bot', `<div class="info-card-yellow"><strong>⚠️ Evaluación de Riesgo Trombótico</strong><br>¿Presenta alguno de estos factores de alto riesgo para TEV recurrente?</div>
+                appendMessage('bot', `<div class="info-card-yellow"><strong>⚠️ Evaluación de Riesgo TEV</strong><br>¿Presenta factores de muy alto riesgo para TEV recurrente?</div>
                     <button onclick="window.selTEV('HIGH')" class="btn-action">Sí — TEV en último mes / TEV recurrente previo / Cirugía con alto riesgo intrínseco de TEV</button>
                     <button onclick="window.selTEV('LOW')" class="btn-action">No — Riesgo TEV habitual</button>`);
                 currentMode = 'WAITING_TEV_RISK';
-            } else {
-                askSurgDate();
-            }
+            } else askSurgDate();
         };
 
         window.selTEV = (tevRisk) => {
@@ -422,12 +568,7 @@
             let html = '';
 
             if (risk === 'LOW') {
-                html += `<div class="info-card-green">
-                    <strong>✅ Riesgo Hemorrágico Bajo</strong><br>
-                    <strong>Conducta:</strong> Continuar Warfarina sin interrupción.<br>
-                    No se requiere suspender ni hacer puente con HBPM.<br>
-                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span>
-                </div>`;
+                html += `<div class="info-card-green"><strong>✅ Riesgo Bajo — Continuar Warfarina</strong><br>No suspender ni hacer puente con HBPM.<br><span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span></div>`;
                 let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
                 for (let i = -2; i <= 2; i++) {
                     const d = new Date(surgDate); d.setDate(surgDate.getDate() + i);
@@ -435,43 +576,31 @@
                     const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
                     let label, rowStyle = '';
                     if (i === 0) { label = '🔪 PROCEDIMIENTO — Dosis normal'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
-                    else { label = '✅ Dosis habitual'; }
+                    else label = '✅ Dosis habitual';
                     table += `<tr${rowStyle}><td>${i===0?'<strong>Día 0</strong>':(i>0?'Día +':'Día ')+i}${isToday?' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>':''}</td><td>${days[d.getDay()]} ${fecha}</td><td>${label}</td></tr>`;
                 }
                 html += table + '</table>';
 
             } else if (risk === 'HIGH') {
-                html += `<div class="info-card-red">
-                    <strong>⚠️ Riesgo Hemorrágico Mod/Alto — Riesgo TEV habitual</strong><br>
-                    <strong>Conducta:</strong> Suspender Warfarina 4–5 días antes. <strong>No se requiere puente con HBPM</strong> en la mayoría de pacientes.<br>
-                    Reiniciar dosis habitual el Día 0 (tras el procedimiento).<br>
-                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span>
-                </div>`;
+                html += `<div class="info-card-red"><strong>⚠️ Riesgo Mod/Alto — Sin puente HBPM</strong><br>Suspender 4–5 días antes. Reiniciar el día de la cirugía.<br><span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span></div>`;
                 let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
                 for (let i = -7; i <= 3; i++) {
                     const d = new Date(surgDate); d.setDate(surgDate.getDate() + i);
                     const isToday = d.toDateString() === new Date().toDateString();
                     const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
                     let label, rowStyle = '';
-                    if (i === -7) { label = '📋 Evaluar riesgo TEV y hemorrágico. Obtener INR basal.'; rowStyle = ' style="background:#eff6ff;"'; }
-                    else if (i === -6 || i === -5) { label = '✅ Dosis habitual'; }
-                    else if (i >= -5 && i < 0) { label = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER Warfarina</span>'; rowStyle = ' style="background:#fef2f2;"'; }
-                    else if (i === 0) { label = '🔪 CIRUGÍA — Verificar INR previo'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
-                    else if (i === 1) { label = '🔄 Reiniciar dosis habitual de Warfarina'; rowStyle = ' style="background:#f0fdf4;"'; }
+                    if (i === -7) { label = '📋 Evaluar riesgo. Obtener INR basal.'; rowStyle = ' style="background:#eff6ff;"'; }
+                    else if (i === -6 || i === -5) { label = '✅ Dosis habitual'; rowStyle = ''; }
+                    else if (i >= -5 && i < 0) { label = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === 0) { label = '🔪 CIRUGÍA — Verificar INR'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
+                    else if (i === 1) { label = '🔄 Reiniciar dosis habitual'; rowStyle = ' style="background:#f0fdf4;"'; }
                     else { label = '✅ Dosis habitual'; rowStyle = ' style="background:#f0fdf4;"'; }
-                    if (i === -6 || i === -5) rowStyle = '';
                     table += `<tr${rowStyle}><td>${i===0?'<strong>Día 0</strong>':(i>0?'Día +':'Día ')+i}${isToday?' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>':''}</td><td>${days[d.getDay()]} ${fecha}</td><td>${label}</td></tr>`;
                 }
                 html += table + '</table>';
 
             } else if (risk === 'HIGH_TEV') {
-                html += `<div class="info-card-red">
-                    <strong>🚨 Riesgo Hemorrágico Mod/Alto — ALTO RIESGO TEV</strong><br>
-                    <strong>Conducta:</strong> Suspender Warfarina 4–5 días antes.<br>
-                    <strong>Considerar puente con HBPM terapéutica</strong> (iniciar ~72h antes, última dosis 24h antes del procedimiento).<br>
-                    Reiniciar HBPM ~24–72h post-procedimiento según hemostasia. Suspender HBPM cuando INR ≥2.0.<br>
-                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4 — Solo para pacientes de muy alto riesgo TEV</span>
-                </div>`;
+                html += `<div class="info-card-red"><strong>🚨 Riesgo Mod/Alto + Alto Riesgo TEV — Con puente HBPM</strong><br>Suspender 5 días antes. Puente con HBPM terapéutica.<br><span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span></div>`;
                 let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Warfarina</th><th>HBPM</th></tr>`;
                 for (let i = -7; i <= 5; i++) {
                     const d = new Date(surgDate); d.setDate(surgDate.getDate() + i);
@@ -480,12 +609,12 @@
                     let warf, hbpm, rowStyle = '';
                     if (i === -7) { warf = '✅ Habitual'; hbpm = '—'; rowStyle = ' style="background:#eff6ff;"'; }
                     else if (i === -6 || i === -5) { warf = '✅ Habitual'; hbpm = '—'; }
-                    else if (i >= -5 && i <= -3) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; hbpm = '—'; rowStyle = ' style="background:#fef2f2;"'; }
-                    else if (i === -2) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; hbpm = '💉 Iniciar HBPM terapéutica'; rowStyle = ' style="background:#fef2f2;"'; }
-                    else if (i === -1) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; hbpm = '💉 Última dosis HBPM (mañana)'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i >= -5 && i <= -3) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔</span>'; hbpm = '—'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === -2) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔</span>'; hbpm = '💉 Iniciar HBPM terapéutica'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === -1) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔</span>'; hbpm = '💉 Última dosis (mañana)'; rowStyle = ' style="background:#fef2f2;"'; }
                     else if (i === 0) { warf = '🔪 CIRUGÍA'; hbpm = '⛔ No administrar'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
                     else if (i === 1) { warf = '🔄 Reiniciar'; hbpm = '💉 Reiniciar si hemostasia estable'; rowStyle = ' style="background:#f0fdf4;"'; }
-                    else if (i <= 5) { warf = '✅ Habitual'; hbpm = 'Continuar hasta INR ≥2.0'; rowStyle = ' style="background:#f0fdf4;"'; }
+                    else { warf = '✅ Habitual'; hbpm = 'Hasta INR ≥2.0'; rowStyle = ' style="background:#f0fdf4;"'; }
                     table += `<tr${rowStyle}><td>${i===0?'<strong>Día 0</strong>':(i>0?'Día +':'Día ')+i}${isToday?' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>':''}</td><td>${days[d.getDay()]} ${fecha}</td><td>${warf}</td><td>${hbpm}</td></tr>`;
                 }
                 html += table + '</table>';
@@ -496,7 +625,7 @@
         }
 
         // =============================================
-        // IA — OPCIONES 2 Y 3
+        // IA — OPCIONES 3 Y 4
         // =============================================
         async function runInteraction(drug) {
             currentMode = 'IDLE';
@@ -505,8 +634,7 @@
                 `Analiza la interacción farmacológica entre Warfarina y ${drug}.`,
                 "Eres un cardiólogo y farmacólogo clínico experto. Estructura tu respuesta en Markdown con las secciones: ## Mecanismo de Interacción, ## Efecto sobre el INR, ## Manejo Clínico Recomendado. Responde en español. Sé conciso y clínico."
             );
-            loading.innerHTML = renderMarkdown(result);
-            showMenuHelp();
+            loading.innerHTML = renderMarkdown(result); showMenuHelp();
         }
 
         async function runAdvancedAnalysis(data) {
@@ -516,27 +644,26 @@
                 `Caso clínico: ${data}`,
                 "Eres un consultor senior en anticoagulación y cardiología. Estructura tu respuesta en Markdown con las secciones: ## Resumen del Caso, ## Riesgos Identificados, ## Conducta Sugerida, ## Consideraciones Adicionales. Responde en español con lenguaje clínico profesional."
             );
-            loading.innerHTML = renderMarkdown(result);
-            showMenuHelp();
+            loading.innerHTML = renderMarkdown(result); showMenuHelp();
         }
 
         // =============================================
-        // OPCIÓN 4 — DIETA
+        // OPCIÓN 5 — DIETA
         // =============================================
         function showDiet() {
             appendMessage('bot', `🥗 **Guía Alimentaria — Vitamina K y Warfarina**<br><br>
-                <strong>Principio clave:</strong> No prohibir alimentos con Vitamina K — mantener <strong>ingesta CONSISTENTE</strong>.<br><br>
+                <strong>Principio clave:</strong> No prohibir alimentos con Vitamina K — mantener ingesta <strong>CONSISTENTE</strong>.<br><br>
                 La ingesta diaria estable de Vitamina K se asocia a mejor control del INR.<br><br>
-                <strong>Alimentos ricos en Vitamina K a mantener estables:</strong><br>
+                <strong>Alimentos ricos en Vitamina K — mantener estables:</strong><br>
                 🥦 Brócoli · 🥬 Espinaca · 🥗 Lechuga · 🌿 Perejil · 🫛 Coles de Bruselas<br><br>
-                <strong>Evitar cambios bruscos</strong> como: iniciar o suspender jugos verdes, dietas especiales o suplementos de Vitamina K.<br><br>
+                <strong>Evitar cambios bruscos</strong> como iniciar o suspender jugos verdes, dietas especiales o suplementos de Vitamina K.<br><br>
                 <strong>Alcohol:</strong> Máximo 1–2 tragos/día. Evitar consumo excesivo.<br><br>
                 <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 7</span>`);
             showMenuHelp();
         }
 
         function showMenuHelp() {
-            setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija: 1, 2, 3, 4 o 5.'), 1500);
+            setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija una opción del <strong>1 al 7</strong>.'), 1500);
         }
 
         function initApp() {
