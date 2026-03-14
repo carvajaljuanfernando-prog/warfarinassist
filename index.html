@@ -29,6 +29,9 @@
         .btn-action { display: block; width: 100%; padding: 12px; margin-top: 8px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; font-weight: 600; color: #4f46e5; text-align: left; transition: all 0.2s; cursor: pointer; }
         .btn-action:hover { background-color: #eef2ff; border-color: #4f46e5; }
         .info-card { border-left: 4px solid #4f46e5; padding: 12px; margin: 12px 0; background-color: #f5f3ff; border-radius: 0 12px 12px 0; }
+        .info-card-green { border-left: 4px solid #10b981; padding: 12px; margin: 12px 0; background-color: #f0fdf4; border-radius: 0 12px 12px 0; }
+        .info-card-yellow { border-left: 4px solid #f59e0b; padding: 12px; margin: 12px 0; background-color: #fffbeb; border-radius: 0 12px 12px 0; }
+        .info-card-red { border-left: 4px solid #dc2626; padding: 12px; margin: 12px 0; background-color: #fef2f2; border-radius: 0 12px 12px 0; }
         .purpose-box { background-color: #ffffff; border-bottom: 2px solid #e5e7eb; padding: 16px 24px; font-size: 0.8rem; color: #4b5563; }
         .caution-tag { color: #dc2626; font-weight: 800; text-transform: uppercase; }
         .logo-container { width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); flex-shrink: 0; }
@@ -40,6 +43,7 @@
         .date-input-box input[type="date"]:focus { border-color: #4f46e5; }
         .date-input-box button { padding: 10px 18px; background: #4f46e5; color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
         .date-input-box button:hover { background: #4338ca; }
+        .guide-tag { font-size: 0.65rem; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 999px; font-weight: 700; margin-left: 4px; vertical-align: middle; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
@@ -74,7 +78,7 @@
                 </button>
             </div>
         </div>
-        <footer class="p-2 bg-gray-100 text-center text-[9px] text-gray-500 border-t uppercase tracking-widest font-bold">Soporte de Decisiones • Gemini 2.5 Flash Engine</footer>
+        <footer class="p-2 bg-gray-100 text-center text-[9px] text-gray-500 border-t uppercase tracking-widest font-bold">Soporte de Decisiones • Gemini 2.5 Flash • Guía ACCP/Anticoagulation Forum 2016</footer>
     </div>
 
     <script>
@@ -83,7 +87,7 @@
 
         let currentMode = 'IDLE';
         let tempIndication = null, tempINR = null, tempDTS = null;
-        let tempSurgRisk = null; // guarda el riesgo quirúrgico mientras esperamos la fecha
+        let tempSurgRisk = null;
 
         const chatWindow = document.getElementById('chat-window');
         const userInput = document.getElementById('user-input');
@@ -154,7 +158,9 @@
 
             if (currentMode === 'IDLE') {
                 if (text.match(/1|ajust|dosis/i)) {
-                    appendMessage('bot', `Seleccione indicación clínica:<br><button onclick="window.selInd('A')" class="btn-action">A. FA / V. Aórtica / TEV (Meta 2-3)</button><button onclick="window.selInd('B')" class="btn-action">B. V. Mitral Mecánica (Meta 2.5-3.5)</button>`);
+                    appendMessage('bot', `Seleccione indicación clínica:<br>
+                        <button onclick="window.selInd('A')" class="btn-action">A. FA / V. Aórtica / TEV (Meta INR 2–3)</button>
+                        <button onclick="window.selInd('B')" class="btn-action">B. V. Mitral Mecánica (Meta INR 2.5–3.5)</button>`);
                     currentMode = 'WAITING_INDICATION';
                 } else if (text.match(/2|interac/i)) {
                     appendMessage('bot', 'Ingrese el fármaco o suplemento para analizar interacción:');
@@ -170,178 +176,172 @@
             else if (currentMode === 'COMPLEX_ANALYSIS_INPUT') runAdvancedAnalysis(text);
             else if (currentMode === 'WAITING_INR') {
                 const val = parseFloat(text.replace(',', '.'));
-                if (!isNaN(val)) {
+                if (!isNaN(val) && val > 0) {
                     tempINR = val;
-                    appendMessage('bot', `INR: **${val}**. Ingrese la **Dosis Total Semanal (DTS)** en mg:`);
+                    appendMessage('bot', `INR registrado: **${val}**.<br>Ingrese la **Dosis Total Semanal (DTS) actual** en mg:`);
                     currentMode = 'WAITING_DTS';
-                } else appendMessage('bot', 'Ingrese un valor numérico válido para el INR.');
+                } else appendMessage('bot', 'Ingrese un valor numérico válido para el INR (ej: 2.4).');
             } else if (currentMode === 'WAITING_DTS') {
                 const val = parseFloat(text.replace(',', '.'));
-                if (!isNaN(val)) {
+                if (!isNaN(val) && val > 0) {
                     tempDTS = val;
+                    // Verificar sangrado solo si INR fuera de rango
                     if (tempINR < tempIndication.min || tempINR > tempIndication.max) {
-                        appendMessage('bot', `<div class="font-bold text-red-700">⚠️ Verificación de Seguridad</div>¿Presenta el paciente sangrado activo o hematomas?<div class="flex space-x-2 mt-3"><button onclick="window.handleBleed(true)" class="btn-action text-center bg-red-600 text-white border-0">SÍ</button><button onclick="window.handleBleed(false)" class="btn-action text-center">NO</button></div>`);
+                        appendMessage('bot', `<div class="info-card-red"><strong>⚠️ Verificación de Seguridad</strong><br>INR fuera de rango terapéutico.<br>¿Presenta el paciente sangrado activo o hematomas?</div>
+                            <div class="flex space-x-2 mt-2">
+                                <button onclick="window.handleBleed(true)" class="btn-action text-center bg-red-600 text-white border-0">SÍ — Hay sangrado</button>
+                                <button onclick="window.handleBleed(false)" class="btn-action text-center">NO — Sin sangrado</button>
+                            </div>`);
                         currentMode = 'WAITING_BLEED';
-                    } else finalizeAdjustment(false);
-                } else appendMessage('bot', 'Ingrese un valor numérico válido para la DTS.');
+                    } else {
+                        calculateAdjustment();
+                    }
+                } else appendMessage('bot', 'Ingrese un valor numérico válido para la DTS (ej: 35).');
             }
         }
 
         window.selInd = (type) => {
-            tempIndication = type === 'A' ? { min: 2, max: 3, label: "Meta 2-3" } : { min: 2.5, max: 3.5, label: "Meta 2.5-3.5" };
-            appendMessage('bot', `Meta registrada: **${tempIndication.label}**. Ingrese el **INR** actual:`);
+            tempIndication = type === 'A'
+                ? { min: 2.0, max: 3.0, label: "Meta INR 2–3", minorLow: 1.7, minorHigh: 3.3 }
+                : { min: 2.5, max: 3.5, label: "Meta INR 2.5–3.5", minorLow: 2.2, minorHigh: 3.8 };
+            appendMessage('bot', `Meta registrada: **${tempIndication.label}**.<br>Ingrese el **INR actual** del paciente:`);
             currentMode = 'WAITING_INR';
         };
 
         window.handleBleed = (hasBleeding) => {
             appendMessage('user', hasBleeding ? "Sí presenta sangrado" : "No presenta sangrado");
             if (hasBleeding) {
-                appendMessage('bot', `🚨 EMERGENCIA: Suspender fármaco y remitir a Urgencias de inmediato.`, true);
-                currentMode = 'IDLE'; showMenuHelp();
-            } else calculateAdjustment();
-        };
-
-        // --- OPCIÓN 5: CIRUGÍA ---
-        function showSurgery() {
-            appendMessage('bot', `<div class="font-bold text-blue-700 text-sm">🔪 PROCEDIMIENTOS</div><button onclick="window.selSurg('LOW')" class="btn-action">A. Bajo Riesgo (Odontología / Cataratas)</button><button onclick="window.selSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto (Cirugía mayor)</button>`);
-        }
-
-        // Paso 1: usuario elige riesgo → guardamos y pedimos fecha
-        window.selSurg = (risk) => {
-            tempSurgRisk = risk;
-            const label = risk === 'LOW' ? 'Bajo Riesgo' : 'Riesgo Mod/Alto';
-            appendMessage('user', label);
-
-            // Mostramos selector de fecha con un widget inline
-            const today = new Date().toISOString().split('T')[0];
-            const container = document.createElement('div');
-            container.className = 'flex justify-start';
-            const box = document.createElement('div');
-            box.className = 'message-box bot-message';
-            box.innerHTML = `
-                <strong>📅 ¿Cuál es la fecha de la cirugía?</strong><br>
-                <div class="date-input-box">
-                    <input type="date" id="surg-date-input" min="${today}" value="${today}">
-                    <button onclick="window.confirmSurgDate()">Confirmar</button>
-                </div>`;
-            container.appendChild(box);
-            chatWindow.appendChild(container);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-            currentMode = 'WAITING_SURG_DATE';
-        };
-
-        // Paso 2: usuario confirma fecha → generamos calendario
-        window.confirmSurgDate = () => {
-            const input = document.getElementById('surg-date-input');
-            if (!input || !input.value) {
-                appendMessage('bot', 'Por favor seleccione una fecha válida.');
-                return;
-            }
-            const surgDate = new Date(input.value + 'T12:00:00'); // evitar desfase de zona horaria
-            const formatted = surgDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            appendMessage('user', `Fecha de cirugía: ${formatted}`);
-            genSurgCalendar(tempSurgRisk, surgDate);
-            currentMode = 'IDLE';
-        };
-
-        // Paso 3: generar el calendario según fecha y riesgo
-        function genSurgCalendar(risk, surgDate) {
-            const days = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
-            let html = '';
-
-            if (risk === 'LOW') {
-                html += `<div class="info-card" style="border-left-color: #10b981;">
-                    <strong>✅ Riesgo Bajo</strong> (Odontología / Cataratas)<br>
-                    No suspender Warfarina. Continuar dosis habitual antes y después.
-                </div>`;
-
-                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
-                for (let i = -2; i <= 2; i++) {
-                    const d = new Date(surgDate);
-                    d.setDate(surgDate.getDate() + i);
-                    const dayName = days[d.getDay()];
-                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-                    const isToday = d.toDateString() === new Date().toDateString();
-
-                    let label, rowStyle = '';
-                    if (i === 0) {
-                        label = '🔪 CIRUGÍA — Dosis normal';
-                        rowStyle = ' style="background:#fef3c7;font-weight:bold;"';
-                    } else {
-                        label = '✅ Dosis normal';
-                    }
-
-                    table += `<tr${rowStyle}>
-                        <td>${i === 0 ? '<strong>Día 0</strong>' : (i > 0 ? 'Día +' : 'Día ') + i}${isToday ? ' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>' : ''}</td>
-                        <td>${dayName} ${fecha}</td>
-                        <td>${label}</td>
-                    </tr>`;
-                }
-                table += `</table>`;
-                html += table;
-
+                appendMessage('bot', `<div class="info-card-red">
+                    <strong>🚨 SANGRADO ACTIVO — Conducta urgente</strong><br><br>
+                    <strong>1.</strong> Suspender Warfarina inmediatamente.<br>
+                    <strong>2.</strong> Administrar Vitamina K 5–10 mg IV lento.<br>
+                    <strong>3.</strong> Considerar CCP 4 factores (concentrado de complejo protrombínico) para reversión rápida.<br>
+                    <strong>4.</strong> Remitir a Urgencias de inmediato.<br><br>
+                    <span style="font-size:0.75rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 5</span>
+                </div>`, true);
+                currentMode = 'IDLE';
+                showMenuHelp();
             } else {
-                html += `<div class="info-card" style="border-left-color: #dc2626;">
-                    <strong>⚠️ Riesgo Moderado / Alto</strong> (Cirugía mayor)<br>
-                    Suspender Warfarina desde Día -5. Reiniciar Día +1 solo si hemostasia estable.
-                </div>`;
+                calculateAdjustment();
+            }
+        };
 
-                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
-                for (let i = -5; i <= 3; i++) {
-                    const d = new Date(surgDate);
-                    d.setDate(surgDate.getDate() + i);
-                    const dayName = days[d.getDay()];
-                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-                    const isToday = d.toDateString() === new Date().toDateString();
+        // =============================================
+        // LÓGICA CLÍNICA CORREGIDA SEGÚN GUÍA 2016
+        // =============================================
+        function calculateAdjustment() {
+            const inr = tempINR;
+            const min = tempIndication.min;
+            const max = tempIndication.max;
+            // Límites de variación menor (±0.3 unidades del rango)
+            const minorLow = tempIndication.minorLow;   // min - 0.3
+            const minorHigh = tempIndication.minorHigh; // max + 0.3
 
-                    let label, rowStyle = '';
-                    if (i < 0) {
-                        label = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>';
-                        rowStyle = ' style="background:#fef2f2;"';
-                    } else if (i === 0) {
-                        label = '🔪 DÍA DE CIRUGÍA';
-                        rowStyle = ' style="background:#fef3c7;font-weight:bold;border:2px solid #f59e0b;"';
-                    } else if (i === 1) {
-                        label = '⚠️ Reiniciar si hemostasia estable';
-                        rowStyle = ' style="background:#f0fdf4;"';
-                    } else {
-                        label = '✅ Reiniciar dosis habitual';
-                        rowStyle = ' style="background:#f0fdf4;"';
-                    }
+            let change = 0, omit = 0, title = '', cardClass = 'info-card', vitK = '', nextINR = '', msg = '';
 
-                    table += `<tr${rowStyle}>
-                        <td>${i === 0 ? '<strong>Día 0</strong>' : (i > 0 ? 'Día +' : 'Día ') + i}${isToday ? ' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>' : ''}</td>
-                        <td>${dayName} ${fecha}</td>
-                        <td>${label}</td>
-                    </tr>`;
+            // --- CASO 1: INR en rango terapéutico ---
+            if (inr >= min && inr <= max) {
+                title = '✅ INR en Rango Terapéutico';
+                cardClass = 'info-card-green';
+                msg = 'Mantener la DTS actual. No se requiere ajuste.';
+                nextINR = 'Repetir INR en <strong>4–6 semanas</strong> si control estable.';
+                change = 0;
+
+            // --- CASO 2: INR levemente fuera de rango (≤0.3 unidades) ---
+            } else if (inr >= minorLow && inr < min) {
+                title = '⚠️ INR Levemente Bajo (variación menor)';
+                cardClass = 'info-card-yellow';
+                msg = 'Variación ≤0.3 unidades bajo el rango. <strong>No ajustar dosis</strong> — probablemente variación aleatoria.';
+                nextINR = 'Repetir INR en <strong>7–14 días</strong> sin cambiar dosis.';
+                change = 0;
+
+            } else if (inr > max && inr <= minorHigh) {
+                title = '⚠️ INR Levemente Elevado (variación menor)';
+                cardClass = 'info-card-yellow';
+                msg = 'Variación ≤0.3 unidades sobre el rango. <strong>No ajustar dosis</strong> — probablemente variación aleatoria.';
+                nextINR = 'Repetir INR en <strong>7–14 días</strong> sin cambiar dosis.';
+                change = 0;
+
+            // --- CASO 3: INR persistentemente bajo ---
+            } else if (inr < minorLow && inr >= min - 0.8) {
+                title = '📈 INR Bajo — Ajuste Conservador';
+                cardClass = 'info-card-yellow';
+                msg = 'INR moderadamente bajo. Aumentar DTS un <strong>5–10%</strong>.';
+                nextINR = 'Repetir INR en <strong>7–14 días</strong>.';
+                change = 0.075; // 7.5% como punto medio conservador
+
+            } else if (inr < min - 0.8) {
+                title = '📈 INR Significativamente Bajo';
+                cardClass = 'info-card-red';
+                msg = 'INR significativamente bajo. Aumentar DTS un <strong>10–15%</strong>.';
+                nextINR = 'Repetir INR en <strong>7 días</strong>.';
+                change = 0.125; // 12.5%
+
+            // --- CASO 4: INR elevado moderadamente (hasta max+1.5) ---
+            } else if (inr > minorHigh && inr <= max + 1.5) {
+                title = '📉 INR Elevado — Ajuste Moderado';
+                cardClass = 'info-card-yellow';
+                omit = 1;
+                msg = `Omitir <strong>1 dosis</strong> y reducir DTS un <strong>10%</strong>.`;
+                nextINR = 'Repetir INR en <strong>7 días</strong>.';
+                change = -0.10;
+
+            // --- CASO 5: INR muy elevado (max+1.5 a 10) sin sangrado ---
+            } else if (inr > max + 1.5 && inr <= 10) {
+                title = '🔴 INR Muy Elevado — Acción Requerida';
+                cardClass = 'info-card-red';
+                omit = 2;
+                msg = `Omitir <strong>2 dosis</strong> y reducir DTS un <strong>15–20%</strong>.`;
+
+                if (inr > 4.5 && inr <= 10) {
+                    vitK = `<br><br><strong>💊 Vitamina K oral:</strong> Considerar 1.25–2.5 mg vía oral si INR entre 4.5–10 sin sangrado activo.`;
                 }
-                table += `</table>`;
-                html += table;
+                nextINR = 'Repetir INR en <strong>3–7 días</strong>.';
+                change = -0.175; // 17.5%
+
+            // --- CASO 6: INR > 10 sin sangrado ---
+            } else if (inr > 10) {
+                title = '🚨 INR Crítico (>10) — Sin Sangrado';
+                cardClass = 'info-card-red';
+                omit = 2;
+                msg = `Suspender Warfarina. Omitir <strong>2–3 dosis</strong> y reducir DTS un <strong>20%</strong> al reanudar.`;
+                vitK = `<br><br><strong>💊 Vitamina K oral OBLIGATORIA:</strong> Administrar <strong>2.5 mg vía oral</strong> inmediatamente.`;
+                nextINR = '<strong>Repetir INR al día siguiente</strong> tras la Vitamina K.';
+                change = -0.20;
+            }
+
+            const newDts = change !== 0
+                ? Math.round((tempDTS * (1 + change)) / MIN_FRACTION_MG) * MIN_FRACTION_MG
+                : tempDTS;
+
+            let html = `<div class="${cardClass}">
+                <strong>${title}</strong><br><br>
+                ${msg}${vitK}
+                <br><br>
+                <strong>DTS actual:</strong> ${tempDTS.toFixed(2)} mg →
+                <strong>Nueva DTS sugerida:</strong> ${newDts.toFixed(2)} mg
+                <br><br>
+                <strong>📅 Próximo control:</strong> ${nextINR}
+                <br><br>
+                <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016</span>
+            </div>`;
+
+            if (newDts !== tempDTS || omit > 0) {
+                html += generateSchedule(newDts, omit);
             }
 
             appendMessage('bot', html);
+            currentMode = 'IDLE';
             showMenuHelp();
-        }
-
-        // --- AJUSTE DE DOSIS ---
-        function finalizeAdjustment(hasBleeding) { if (!hasBleeding) calculateAdjustment(); }
-
-        function calculateAdjustment() {
-            let change = 0, msg = "", omit = 0;
-            if (tempINR < tempIndication.min) { change = 0.15; msg = "INR bajo meta. Incrementar DTS."; }
-            else if (tempINR <= tempIndication.max) { change = 0; msg = "INR en rango terapéutico. Mantener DTS."; }
-            else if (tempINR <= tempIndication.max + 1.5) { change = -0.15; omit = 1; msg = "INR elevado. Omitir 1 dosis y reducir DTS."; }
-            else { change = -0.20; omit = 2; msg = "INR muy elevado. Omitir 2 dosis y reducir DTS."; }
-            const newDts = Math.round((tempDTS * (1 + change)) / MIN_FRACTION_MG) * MIN_FRACTION_MG;
-            appendMessage('bot', `<div class="info-card"><strong>📋 Plan Sugerido</strong><br>${msg}<br>Nueva DTS: <strong>${newDts.toFixed(2)} mg</strong></div>${generateSchedule(newDts, omit)}`);
-            currentMode = 'IDLE'; showMenuHelp();
         }
 
         function generateSchedule(dts, omit) {
             const days = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
             const todayIdx = new Date().getDay();
             const rotated = days.slice(todayIdx).concat(days.slice(0, todayIdx));
-            let blocks = Math.round(dts / MIN_FRACTION_MG), base = Math.floor(blocks / 7) * MIN_FRACTION_MG, extras = blocks % 7, extrasAssigned = 0;
+            let blocks = Math.round(dts / MIN_FRACTION_MG);
+            let base = Math.floor(blocks / 7) * MIN_FRACTION_MG;
+            let extras = blocks % 7, extrasAssigned = 0;
             let html = `<table class="schedule-table"><tr><th>Día</th><th>mg</th><th>Fracción</th></tr>`;
             for (let i = 0; i < 7; i++) {
                 let mg;
@@ -360,7 +360,144 @@
             return (s.trim() || "0") + " tab";
         }
 
-        // --- IA ---
+        // =============================================
+        // OPCIÓN 5 — CIRUGÍA CON FECHA Y RIESGO TEV
+        // =============================================
+        function showSurgery() {
+            appendMessage('bot', `<div class="font-bold text-blue-700 text-sm mb-2">🔪 MANEJO PERIOPERATORIO DE WARFARINA</div>
+                <button onclick="window.selSurg('LOW')" class="btn-action">A. Bajo Riesgo hemorrágico (Odontología / Cataratas / Dermatología menor)</button>
+                <button onclick="window.selSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto (Cirugía mayor / abdominal / ortopédica)</button>`);
+        }
+
+        window.selSurg = (risk) => {
+            tempSurgRisk = risk;
+            appendMessage('user', risk === 'LOW' ? 'Bajo Riesgo hemorrágico' : 'Riesgo Moderado/Alto');
+
+            if (risk === 'HIGH') {
+                // Preguntar riesgo TEV antes de la fecha
+                appendMessage('bot', `<div class="info-card-yellow"><strong>⚠️ Evaluación de Riesgo Trombótico</strong><br>¿Presenta alguno de estos factores de alto riesgo para TEV recurrente?</div>
+                    <button onclick="window.selTEV('HIGH')" class="btn-action">Sí — TEV en último mes / TEV recurrente previo / Cirugía con alto riesgo intrínseco de TEV</button>
+                    <button onclick="window.selTEV('LOW')" class="btn-action">No — Riesgo TEV habitual</button>`);
+                currentMode = 'WAITING_TEV_RISK';
+            } else {
+                askSurgDate();
+            }
+        };
+
+        window.selTEV = (tevRisk) => {
+            tempSurgRisk = tevRisk === 'HIGH' ? 'HIGH_TEV' : 'HIGH';
+            appendMessage('user', tevRisk === 'HIGH' ? 'Sí, alto riesgo TEV' : 'No, riesgo TEV habitual');
+            askSurgDate();
+        };
+
+        function askSurgDate() {
+            const today = new Date().toISOString().split('T')[0];
+            const container = document.createElement('div');
+            container.className = 'flex justify-start';
+            const box = document.createElement('div');
+            box.className = 'message-box bot-message';
+            box.innerHTML = `<strong>📅 ¿Cuál es la fecha programada de la cirugía?</strong>
+                <div class="date-input-box">
+                    <input type="date" id="surg-date-input" min="${today}" value="${today}">
+                    <button onclick="window.confirmSurgDate()">Confirmar</button>
+                </div>`;
+            container.appendChild(box);
+            chatWindow.appendChild(container);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            currentMode = 'WAITING_SURG_DATE';
+        }
+
+        window.confirmSurgDate = () => {
+            const input = document.getElementById('surg-date-input');
+            if (!input || !input.value) { appendMessage('bot', 'Por favor seleccione una fecha válida.'); return; }
+            const surgDate = new Date(input.value + 'T12:00:00');
+            const formatted = surgDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            appendMessage('user', `Fecha de cirugía: ${formatted}`);
+            genSurgCalendar(tempSurgRisk, surgDate);
+            currentMode = 'IDLE';
+        };
+
+        function genSurgCalendar(risk, surgDate) {
+            const days = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+            let html = '';
+
+            if (risk === 'LOW') {
+                html += `<div class="info-card-green">
+                    <strong>✅ Riesgo Hemorrágico Bajo</strong><br>
+                    <strong>Conducta:</strong> Continuar Warfarina sin interrupción.<br>
+                    No se requiere suspender ni hacer puente con HBPM.<br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span>
+                </div>`;
+                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
+                for (let i = -2; i <= 2; i++) {
+                    const d = new Date(surgDate); d.setDate(surgDate.getDate() + i);
+                    const isToday = d.toDateString() === new Date().toDateString();
+                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    let label, rowStyle = '';
+                    if (i === 0) { label = '🔪 PROCEDIMIENTO — Dosis normal'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
+                    else { label = '✅ Dosis habitual'; }
+                    table += `<tr${rowStyle}><td>${i===0?'<strong>Día 0</strong>':(i>0?'Día +':'Día ')+i}${isToday?' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>':''}</td><td>${days[d.getDay()]} ${fecha}</td><td>${label}</td></tr>`;
+                }
+                html += table + '</table>';
+
+            } else if (risk === 'HIGH') {
+                html += `<div class="info-card-red">
+                    <strong>⚠️ Riesgo Hemorrágico Mod/Alto — Riesgo TEV habitual</strong><br>
+                    <strong>Conducta:</strong> Suspender Warfarina 4–5 días antes. <strong>No se requiere puente con HBPM</strong> en la mayoría de pacientes.<br>
+                    Reiniciar dosis habitual el Día 0 (tras el procedimiento).<br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4</span>
+                </div>`;
+                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Indicación</th></tr>`;
+                for (let i = -7; i <= 3; i++) {
+                    const d = new Date(surgDate); d.setDate(surgDate.getDate() + i);
+                    const isToday = d.toDateString() === new Date().toDateString();
+                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    let label, rowStyle = '';
+                    if (i === -7) { label = '📋 Evaluar riesgo TEV y hemorrágico. Obtener INR basal.'; rowStyle = ' style="background:#eff6ff;"'; }
+                    else if (i === -6 || i === -5) { label = '✅ Dosis habitual'; }
+                    else if (i >= -5 && i < 0) { label = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER Warfarina</span>'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === 0) { label = '🔪 CIRUGÍA — Verificar INR previo'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
+                    else if (i === 1) { label = '🔄 Reiniciar dosis habitual de Warfarina'; rowStyle = ' style="background:#f0fdf4;"'; }
+                    else { label = '✅ Dosis habitual'; rowStyle = ' style="background:#f0fdf4;"'; }
+                    if (i === -6 || i === -5) rowStyle = '';
+                    table += `<tr${rowStyle}><td>${i===0?'<strong>Día 0</strong>':(i>0?'Día +':'Día ')+i}${isToday?' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>':''}</td><td>${days[d.getDay()]} ${fecha}</td><td>${label}</td></tr>`;
+                }
+                html += table + '</table>';
+
+            } else if (risk === 'HIGH_TEV') {
+                html += `<div class="info-card-red">
+                    <strong>🚨 Riesgo Hemorrágico Mod/Alto — ALTO RIESGO TEV</strong><br>
+                    <strong>Conducta:</strong> Suspender Warfarina 4–5 días antes.<br>
+                    <strong>Considerar puente con HBPM terapéutica</strong> (iniciar ~72h antes, última dosis 24h antes del procedimiento).<br>
+                    Reiniciar HBPM ~24–72h post-procedimiento según hemostasia. Suspender HBPM cuando INR ≥2.0.<br>
+                    <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía 2016 — Pregunta 4 — Solo para pacientes de muy alto riesgo TEV</span>
+                </div>`;
+                let table = `<table class="schedule-table"><tr><th>Día</th><th>Fecha</th><th>Warfarina</th><th>HBPM</th></tr>`;
+                for (let i = -7; i <= 5; i++) {
+                    const d = new Date(surgDate); d.setDate(surgDate.getDate() + i);
+                    const isToday = d.toDateString() === new Date().toDateString();
+                    const fecha = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    let warf, hbpm, rowStyle = '';
+                    if (i === -7) { warf = '✅ Habitual'; hbpm = '—'; rowStyle = ' style="background:#eff6ff;"'; }
+                    else if (i === -6 || i === -5) { warf = '✅ Habitual'; hbpm = '—'; }
+                    else if (i >= -5 && i <= -3) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; hbpm = '—'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === -2) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; hbpm = '💉 Iniciar HBPM terapéutica'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === -1) { warf = '<span style="color:#dc2626;font-weight:bold;">⛔ SUSPENDER</span>'; hbpm = '💉 Última dosis HBPM (mañana)'; rowStyle = ' style="background:#fef2f2;"'; }
+                    else if (i === 0) { warf = '🔪 CIRUGÍA'; hbpm = '⛔ No administrar'; rowStyle = ' style="background:#fef3c7;font-weight:bold;"'; }
+                    else if (i === 1) { warf = '🔄 Reiniciar'; hbpm = '💉 Reiniciar si hemostasia estable'; rowStyle = ' style="background:#f0fdf4;"'; }
+                    else if (i <= 5) { warf = '✅ Habitual'; hbpm = 'Continuar hasta INR ≥2.0'; rowStyle = ' style="background:#f0fdf4;"'; }
+                    table += `<tr${rowStyle}><td>${i===0?'<strong>Día 0</strong>':(i>0?'Día +':'Día ')+i}${isToday?' <span style="font-size:0.7rem;color:#4f46e5;">(hoy)</span>':''}</td><td>${days[d.getDay()]} ${fecha}</td><td>${warf}</td><td>${hbpm}</td></tr>`;
+                }
+                html += table + '</table>';
+            }
+
+            appendMessage('bot', html);
+            showMenuHelp();
+        }
+
+        // =============================================
+        // IA — OPCIONES 2 Y 3
+        // =============================================
         async function runInteraction(drug) {
             currentMode = 'IDLE';
             const loading = appendMessage('bot', '<span class="loading-pulse">✨ Consultando farmacopea con IA...</span>');
@@ -368,7 +505,8 @@
                 `Analiza la interacción farmacológica entre Warfarina y ${drug}.`,
                 "Eres un cardiólogo y farmacólogo clínico experto. Estructura tu respuesta en Markdown con las secciones: ## Mecanismo de Interacción, ## Efecto sobre el INR, ## Manejo Clínico Recomendado. Responde en español. Sé conciso y clínico."
             );
-            loading.innerHTML = renderMarkdown(result); showMenuHelp();
+            loading.innerHTML = renderMarkdown(result);
+            showMenuHelp();
         }
 
         async function runAdvancedAnalysis(data) {
@@ -378,11 +516,22 @@
                 `Caso clínico: ${data}`,
                 "Eres un consultor senior en anticoagulación y cardiología. Estructura tu respuesta en Markdown con las secciones: ## Resumen del Caso, ## Riesgos Identificados, ## Conducta Sugerida, ## Consideraciones Adicionales. Responde en español con lenguaje clínico profesional."
             );
-            loading.innerHTML = renderMarkdown(result); showMenuHelp();
+            loading.innerHTML = renderMarkdown(result);
+            showMenuHelp();
         }
 
+        // =============================================
+        // OPCIÓN 4 — DIETA
+        // =============================================
         function showDiet() {
-            appendMessage('bot', `🥗 **Nota Nutricional:** Mantenga consistencia en Vitamina K. No prohíba vegetales verdes, mantenga ingesta estable.`);
+            appendMessage('bot', `🥗 **Guía Alimentaria — Vitamina K y Warfarina**<br><br>
+                <strong>Principio clave:</strong> No prohibir alimentos con Vitamina K — mantener <strong>ingesta CONSISTENTE</strong>.<br><br>
+                La ingesta diaria estable de Vitamina K se asocia a mejor control del INR.<br><br>
+                <strong>Alimentos ricos en Vitamina K a mantener estables:</strong><br>
+                🥦 Brócoli · 🥬 Espinaca · 🥗 Lechuga · 🌿 Perejil · 🫛 Coles de Bruselas<br><br>
+                <strong>Evitar cambios bruscos</strong> como: iniciar o suspender jugos verdes, dietas especiales o suplementos de Vitamina K.<br><br>
+                <strong>Alcohol:</strong> Máximo 1–2 tragos/día. Evitar consumo excesivo.<br><br>
+                <span style="font-size:0.7rem;color:#6b7280;">Ref: Guía ACCP/Anticoagulation Forum 2016 — Pregunta 7</span>`);
             showMenuHelp();
         }
 
