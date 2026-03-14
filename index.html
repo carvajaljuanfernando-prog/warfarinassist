@@ -79,8 +79,10 @@
     </div>
 
     <script>
+        // --- CONFIGURACIÓN GLOBAL ---
         const apiKey = "AIzaSyBu6zbc4MCmVL8oQWFJbEsauKiyeq646bM"; 
         const MIN_FRACTION_MG = 1.25;
+
         let currentMode = 'IDLE', tempIndication = null, tempINR = null, tempDTS = null;
         const chatWindow = document.getElementById('chat-window'), userInput = document.getElementById('user-input'), sendBtn = document.getElementById('send-btn');
 
@@ -100,14 +102,15 @@
         }
 
         async function callGeminiAPI(prompt, systemInstruction) {
-            if (!apiKey) return "⚠️ Error de configuración.";
-            // Cambiamos a gemini-1.5-flash para mayor estabilidad
+            if (!apiKey) return "⚠️ Error: Falta la clave API en el código.";
+            
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             const payload = { 
                 contents: [{ parts: [{ text: prompt }] }], 
                 systemInstruction: { parts: [{ text: systemInstruction }] } 
             };
 
+            // Implementación de reintentos con Exponential Backoff
             for (let i = 0; i < 5; i++) {
                 try {
                     const response = await fetch(url, { 
@@ -115,18 +118,24 @@
                         headers: { 'Content-Type': 'application/json' }, 
                         body: JSON.stringify(payload) 
                     });
+
                     if (!response.ok) {
                         const errorData = await response.json();
-                        console.error("Error detallado de API:", errorData);
-                        throw new Error();
+                        console.error("Detalle técnico del error:", errorData);
+                        // Si es un error de cuota o servidor, reintentamos. Si es de clave, paramos.
+                        if (response.status === 400 || response.status === 403) {
+                            return `⚠️ Error de Configuración (${response.status}): ${errorData.error?.message || "Acceso denegado"}. Verifique su clave API.`;
+                        }
+                        throw new Error(`Status ${response.status}`);
                     }
+
                     const result = await response.json(); 
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "No se recibió una respuesta clara de la IA.";
                 } catch (e) { 
+                    if (i === 4) return `⚠️ Error de conexión: No se pudo contactar con el servidor de IA. Verifique su internet. (Detalle: ${e.message})`;
                     await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000)); 
                 }
             }
-            return "⚠️ Error de conexión con la IA. Por favor, verifique si su API Key es correcta o si tiene conexión a internet.";
         }
 
         function processInput() {
@@ -152,7 +161,7 @@
                 if (!isNaN(val)) {
                     tempDTS = val;
                     if (tempINR < tempIndication.min || tempINR > tempIndication.max) {
-                        appendMessage('bot', `<div class="font-bold text-red-700">⚠️ Verificación de Seguridad</div>¿Sangrado activo?<div class="flex space-x-2 mt-3"><button onclick="window.handleBleed(true)" class="btn-action text-center bg-red-600 text-white border-0">SÍ</button><button onclick="window.handleBleed(false)" class="btn-action text-center">NO</button></div>`);
+                        appendMessage('bot', `<div class="font-bold text-red-700">⚠️ Verificación de Seguridad</div>¿Presenta el paciente sangrado activo o hematomas?<div class="flex space-x-2 mt-3"><button onclick="window.handleBleed(true)" class="btn-action text-center bg-red-600 text-white border-0">SÍ</button><button onclick="window.handleBleed(false)" class="btn-action text-center">NO</button></div>`);
                         currentMode = 'WAITING_BLEED';
                     } else finalizeAdjustment(false);
                 }
@@ -166,12 +175,12 @@
 
         window.handleBleed = (hasBleeding) => {
             appendMessage('user', hasBleeding ? "Sí presenta sangrado" : "No presenta sangrado");
-            if (hasBleeding) { appendMessage('bot', `🚨 EMERGENCIA: Remitir a Urgencias de inmediato.`, true); currentMode = 'IDLE'; showMenuHelp(); }
+            if (hasBleeding) { appendMessage('bot', `🚨 EMERGENCIA: Suspender fármaco y remitir a Urgencias de inmediato.`, true); currentMode = 'IDLE'; showMenuHelp(); }
             else calculateAdjustment();
         };
 
         window.genSurg = (risk) => {
-            const html = risk === 'LOW' ? `<div class="info-card" style="border-left-color: #10b981;">Riesgo Bajo: No suspender. Dosis normal Día 0.</div>` : `<div class="info-card" style="border-left-color: #dc2626;">Riesgo Mod/Alto: Suspender Día -5. Reiniciar Día +1 si hay hemostasia.</div>`;
+            const html = risk === 'LOW' ? `<div class="info-card" style="border-left-color: #10b981;">Riesgo Bajo: No suspender dosis. Tomar dosis normal Día 0.</div>` : `<div class="info-card" style="border-left-color: #dc2626;">Riesgo Mod/Alto: Suspender Día -5. Reiniciar Día +1 si hay hemostasia estable.</div>`;
             appendMessage('bot', html); showMenuHelp();
         };
 
@@ -186,6 +195,7 @@
             else if (tempINR <= tempIndication.max) { change = 0; msg = "INR en rango terapéutico."; }
             else if (tempINR <= tempIndication.max + 1.5) { change = -0.15; omit = 1; msg = "INR elevado. Omitir 1 dosis y reducir DTS."; }
             else { change = -0.20; omit = 2; msg = "INR muy elevado. Omitir 2 dosis y reducir DTS."; }
+            
             const newDts = Math.round((tempDTS * (1 + change)) / MIN_FRACTION_MG) * MIN_FRACTION_MG;
             const schedule = generateSchedule(newDts, omit);
             appendMessage('bot', `**Plan Sugerido:** DTS ${newDts.toFixed(2)} mg. ${schedule}`);
@@ -213,22 +223,22 @@
         }
 
         async function runInteraction(drug) {
-            const loading = appendMessage('bot', '<span class="loading-pulse">✨ Consultando IA...</span>');
-            const result = await callGeminiAPI(`Analiza interacción entre Warfarina y ${drug}.`, "Experto cardiólogo. Mecanismo y efecto en INR. Conciso. Markdown.");
+            const loading = appendMessage('bot', '<span class="loading-pulse">✨ Consultando farmacopea con IA...</span>');
+            const result = await callGeminiAPI(`Analiza interacción entre Warfarina y ${drug}.`, "Eres un cardiólogo experto. Indica mecanismo, efecto en el INR y recomendación. Responde en español y Markdown.");
             loading.innerHTML = result; currentMode = 'IDLE'; showMenuHelp();
         }
 
         async function runAdvancedAnalysis(data) {
             const loading = appendMessage('bot', '<span class="loading-pulse">✨ Realizando análisis clínico...</span>');
-            const result = await callGeminiAPI(`Caso: ${data}`, "Experto cardiólogo. Resumen de riesgos y conducta sugerida. Markdown profesional.");
+            const result = await callGeminiAPI(`Caso: ${data}`, "Eres un consultor senior en anticoagulación. Da un resumen de riesgos y conducta sugerida. Responde en español y Markdown profesional.");
             loading.innerHTML = result; currentMode = 'IDLE'; showMenuHelp();
         }
 
-        function showDiet() { appendMessage('bot', `🥗 Consistencia en Vitamina K. No prohíba alimentos verdes.`); showMenuHelp(); }
-        function showSurgery() { appendMessage('bot', `<div class="font-bold text-blue-700 text-sm">🔪 PROCEDIMIENTOS</div><button onclick="window.genSurg('LOW')" class="btn-action">A. Bajo Riesgo</button><button onclick="window.genSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto</button>`); }
-        function showMenuHelp() { setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija: 1 a 5.'), 1500); }
+        function showDiet() { appendMessage('bot', `🥗 **Nota Nutricional:** Mantenga consistencia en Vitamina K. No prohíba vegetales verdes, mantenga ingesta estable.`); showMenuHelp(); }
+        function showSurgery() { appendMessage('bot', `<div class="font-bold text-blue-700 text-sm">🔪 PROCEDIMIENTOS</div><button onclick="window.genSurg('LOW')" class="btn-action">A. Bajo Riesgo (Odontología/Cataratas)</button><button onclick="window.genSurg('HIGH')" class="btn-action">B. Riesgo Mod/Alto (Cirugía mayor)</button>`); }
+        function showMenuHelp() { setTimeout(() => appendMessage('bot', '¿Desea otro soporte? Elija: 1, 2, 3, 4 o 5.'), 1500); }
         function initApp() { sendBtn.onclick = processInput; userInput.onkeypress = (e) => { if (e.key === 'Enter') processInput(); }; showInitialMenu(); }
-        window.onload = initApp;
+        window.addEventListener('load', initApp);
     </script>
 </body>
 </html>
